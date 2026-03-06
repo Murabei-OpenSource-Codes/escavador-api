@@ -226,7 +226,7 @@ class EscavadorAPI:
 
     def get_process_public_documents(
         self, process_number: str, limit: int = 50):
-        """Retrieve public documents associated with a CNJ number.
+        """Retrieve available public documents associated with a CNJ number.
 
         Args:
             process_number (str):
@@ -293,7 +293,7 @@ class EscavadorAPI:
                 payload={"error": str(e)})
 
     def get_process_all_documents(self, process_number: str, limit: int = 50):
-        """Retrieve all documents associated with a CNJ number.
+        """Retrieve all available documents associated with a CNJ number.
 
         This method includes public and restricted documents (when available
         to the authenticated user).
@@ -362,7 +362,10 @@ class EscavadorAPI:
                 payload={"error": str(e)})
 
     def request_process_update_public(self, process_number: str):
-        """Retrieve public process information from Escavador using CNJ number.
+        """Request update to public process information using CNJ number.
+
+        This method requests Escavador to search for new information on the
+        process and update it, along with public documents found.
 
         Args:
             process_number (str):
@@ -371,8 +374,8 @@ class EscavadorAPI:
 
         Returns:
             dict:
-                JSON response returned by the Escavador API containing
-                information about the process.
+                JSON response returned by the Escavador API with
+                the search request status.
 
         Raises:
             EscavadorAPIInvalidDocumentException:
@@ -425,7 +428,11 @@ class EscavadorAPI:
         auth_password: str = None,
         certificate_id: int = None,
         use_certificate: bool = False):
-        """Retrieve process information from Escavador using CNJ number.
+        """Request update to complete process information using CNJ number.
+
+        This method requests Escavador to search for new information on the
+        process and update it, along with any public or restricted documents
+        found using the credentials provided.
 
         Args:
             process_number (str):
@@ -446,8 +453,8 @@ class EscavadorAPI:
 
         Returns:
             dict:
-                JSON response returned by the Escavador API containing
-                information about the process.
+                JSON response returned by the Escavador API with
+                the search request status.
 
         Raises:
             EscavadorAPIInvalidDocumentException:
@@ -521,10 +528,7 @@ class EscavadorAPI:
                 payload={"error": str(e)})
 
     def get_process_update_status(self, process_number: str):
-        """Retrieve all documents associated with a CNJ number.
-
-        This method includes public and restricted documents (when available
-        to the authenticated user).
+        """Retrieve search request status.
 
         Args:
             process_number (str):
@@ -533,7 +537,8 @@ class EscavadorAPI:
 
         Returns:
             dict:
-                JSON response returned by the Escavador API.
+                JSON response returned by the Escavador API with
+                the search request status.
 
         Raises:
             EscavadorAPIInvalidDocumentException:

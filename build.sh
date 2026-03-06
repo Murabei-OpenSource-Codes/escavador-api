@@ -1,6 +1,6 @@
 source VERSION
+sed -e 's#{VERSION}#'"${VERSION}"'#g' pyproject_template.toml > pyproject.toml
 
-rm -R build/
 poetry build
 
 git add --all
