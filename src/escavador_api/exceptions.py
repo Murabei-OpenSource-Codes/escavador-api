@@ -2,18 +2,17 @@
 
 
 class EscavadorAPIException(Exception): # NOQA
-    """Custom Tratum API Exception."""
+    """Custom Escavador API Exception."""
 
     def __repr__(self):
         """__repr__."""
-        template = "{class_name}: {message}"
-        return template.format(
-            class_name=self.__class__.__name__,
-            message=self.message)
+        template = "{message}\nerror_payload={payload}"
+        return template.format(message=self.message, payload=self.payload)
 
     def __str__(self):
         """__str__."""
-        return self.__repr__()
+        template = "{message}\nerror payload={payload}"
+        return template.format(message=self.message, payload=self.payload)
 
     def __init__(self, message: str, payload: dict = {}):
         """__init__.

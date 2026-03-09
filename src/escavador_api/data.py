@@ -43,11 +43,21 @@ class EscavadorAPI:
         Returns:
             bool: Whether process number is valid.
         """
+        # Checks if process_number is a string or int
+        if not isinstance(process_number, (str, int)):
+            msg = "Process number must be a string or an integer"
+            raise EscavadorAPIInvalidDocumentException(
+                message=msg,
+                payload={"process_number": process_number})
+
+        process_number = str(process_number)
         digits = [int(digit) for digit in process_number if digit.isdigit()]
 
         if len(digits) != 20:
-            msg = "O número do processo não está no formato CNJ."
-            raise EscavadorAPIInvalidDocumentException(message=msg)
+            msg = "Process number is not in a valid CNJ format"
+            raise EscavadorAPIInvalidDocumentException(
+                message=msg,
+                payload={"process_number": process_number})
 
         digits = "".join(str(num) for num in digits)
 
@@ -62,8 +72,10 @@ class EscavadorAPI:
         calculated_vd_str = f"{calculated_vd:02d}"
 
         if verification_digits != calculated_vd_str:
-            msg = "Número do processo inválido."
-            raise EscavadorAPIInvalidDocumentException(message=msg)
+            msg = "Invalid process number"
+            raise EscavadorAPIInvalidDocumentException(
+                message=msg,
+                payload={"process_number": process_number})
 
         return True
 
@@ -78,10 +90,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -111,8 +121,8 @@ class EscavadorAPI:
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
 
         Returns:
             dict:
@@ -122,10 +132,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -146,25 +154,26 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number})
 
     def get_process_movements(self, process_number: str, limit: int = 50):
         """Retrieve process movements from Escavador using CNJ number.
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
             limit (int):
                 Limit items per page. Parameter is passed through requests.
                 Default is 50.
@@ -173,7 +182,6 @@ class EscavadorAPI:
             dict:
                 JSON response returned by the Escavador API.
                 The response contains the following keys:
-
                 - `items`: List of dictionaries representing public documents
                 associated with the process.
                 - `links`: Pagination links, including the URL for the
@@ -184,10 +192,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -212,17 +218,20 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number,
+                         "limit": limit})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "limit": limit})
 
     def get_process_public_documents(
         self, process_number: str, limit: int = 50):
@@ -230,8 +239,8 @@ class EscavadorAPI:
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
             limit (int):
                 Limit items per page. Parameter is passed through requests.
                 Default is 50.
@@ -240,7 +249,6 @@ class EscavadorAPI:
             dict:
                 JSON response returned by the Escavador API.
                 The response contains the following keys:
-
                 - `items`: List of dictionaries representing public documents
                 associated with the process.
                 - `links`: Pagination links, including the URL for the
@@ -251,16 +259,13 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
         url = (self.BASE_URL +
-               "v2/processos/numero_cnj/" +
-               "{process_number}/documentos-publicos"
+               "v2/processos/numero_cnj/{process_number}/documentos-publicos"
                .format(process_number=process_number))
 
         # TODO: validate how pagination is done.
@@ -280,17 +285,20 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number,
+                         "limit": limit})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "limit": limit})
 
     def get_process_all_documents(self, process_number: str, limit: int = 50):
         """Retrieve all available documents associated with a CNJ number.
@@ -300,8 +308,8 @@ class EscavadorAPI:
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
             limit (int):
                 Limit items per page. Parameter is passed through requests.
                 Default is 50.
@@ -310,7 +318,6 @@ class EscavadorAPI:
             dict:
                 JSON response returned by the Escavador API.
                 The response contains the following keys:
-
                 - `items`: List of dictionaries representing public documents
                 associated with the process.
                 - `links`: Pagination links, including the URL for the
@@ -321,10 +328,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -349,17 +354,20 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number,
+                         "limit": limit})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "limit": limit})
 
     def request_process_update_public(self, process_number: str):
         """Request update to public process information using CNJ number.
@@ -369,8 +377,8 @@ class EscavadorAPI:
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
 
         Returns:
             dict:
@@ -380,10 +388,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -393,8 +399,7 @@ class EscavadorAPI:
                .format(process_number=process_number))
 
         # Build data payload
-        data = {
-            "documentos_publicos": 1}
+        data = {"documentos_publicos": 1}
 
         try:
             # Checks if process number is valid before sending request
@@ -409,17 +414,20 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number,
+                         "data": data})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "data": data})
 
     def request_process_update_full(
         self,
@@ -436,8 +444,8 @@ class EscavadorAPI:
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
             auth_username (str):
                 Username for user authentication.
                 Required if use_certificate is not provided.
@@ -459,10 +467,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -515,25 +521,28 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number,
+                         "data": data})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "data": data})
 
     def get_process_update_status(self, process_number: str):
         """Retrieve search request status.
 
         Args:
             process_number (str):
-                Process number following CNJ format (20 digits), with or
-                without punctuation.
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
 
         Returns:
             dict:
@@ -543,10 +552,8 @@ class EscavadorAPI:
         Raises:
             EscavadorAPIInvalidDocumentException:
                 If the provided process number is not a valid CNJ number.
-
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
-
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -567,14 +574,253 @@ class EscavadorAPI:
         except EscavadorAPIInvalidDocumentException:
             raise
 
-        except requests.HTTPError as e:
+        except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={"error": str(e),
+                         "process_number": process_number})
+
+    def download_process_file(self, process_number: str, file_key: str):
+        """Download PDF file of process documents.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+            file_key (str):
+                Key used to download the document from Escavador database.
+
+        Returns:
+            bytes:
+                Binary content of the PDF document returned by the
+                Escavador API.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If the provided process number is not a valid CNJ number.
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        # Add punctuation to CNJ number (required for downloads)
+        # Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+        formatted_process_number = (
+            f"{process_number[0:7]}-"
+            f"{process_number[7:9]}."
+            f"{process_number[9:13]}."
+            f"{process_number[13]}."
+            f"{process_number[14:16]}."
+            f"{process_number[16:20]}")
+
+        url = (self.BASE_URL +
+               "v2/processos/numero_cnj/" +
+               "{formatted_process_number}/documentos/{file_key}"
+               .format(formatted_process_number=formatted_process_number,
+                       file_key=file_key))
+
+        try:
+            # Checks if process number is valid before sending request
+            self._validate_process_number(process_number)
+
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            if response.headers['Content-Type'] == 'application/pdf':
+                return response.content
+
+            else:
+                msg = "Failed to download document"
+                raise EscavadorAPIProblemAPIException(
+                    message=msg,
+                    payload={
+                        "formatted_process_number": formatted_process_number,
+                        "file_key": file_key})
+
+        except EscavadorAPIInvalidDocumentException:
+            raise
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"process_number": process_number})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "process_number": process_number})
+
+    def request_ai_summary(self, process_number: str):
+        """Request a summary of available process information using CNJ number.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with
+                the search request details and status.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If the provided process number is not a valid CNJ number.
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/processos/numero_cnj/{process_number}/"
+               .format(process_number=process_number) +
+               "ia/resumo/solicitar-atualizacao")
+
+        try:
+            # Checks if process number is valid before sending request
+            self._validate_process_number(process_number)
+
+            response = self.session.post(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except EscavadorAPIInvalidDocumentException:
+            raise
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"process_number": process_number})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "process_number": process_number})
+
+    def get_ai_summary_status(self, process_number: str, summary_id: int):
+        """Retrieve AI summary generation status.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+            summary_id (int):
+                Summary ID returned from generation request.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with
+                the search request status.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If the provided process number is not a valid CNJ number.
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/processos/numero_cnj/{process_number}/" +
+               "ia/resumo/status").format(process_number=process_number)
+
+        try:
+            # Checks if process number is valid before sending request
+            self._validate_process_number(process_number)
+
+            response = self.session.get(
+                url=url, params={"id": summary_id}, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except EscavadorAPIInvalidDocumentException:
+            raise
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"process_number": process_number,
+                         "summary_id": summary_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "summary_id": summary_id})
+
+    def get_ai_summary(self, process_number: str, summary_id: int):
+        """Retrieve AI summary.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+            summary_id (int):
+                Summary ID returned from generation request.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with the
+                generated AI summary, update date and summary metadata.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If the provided process number is not a valid CNJ number.
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/processos/numero_cnj/{process_number}/ia/resumo"
+               .format(process_number=process_number))
+
+        try:
+            # Checks if process number is valid before sending request
+            self._validate_process_number(process_number)
+
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except EscavadorAPIInvalidDocumentException:
+            raise
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"process_number": process_number,
+                         "summary_id": summary_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "process_number": process_number,
+                         "summary_id": summary_id})
+
+    # TODO: methods for monitoring new and existing processes
