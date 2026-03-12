@@ -5,6 +5,14 @@ from escavador_api.exceptions import (
     EscavadorAPIProblemAPIException,
     EscavadorAPIUnmappedErrorException,
 )
+from typing import Literal, TypedDict
+
+
+# Special type for aux_keyword parameter
+class KeywordDict(TypedDict):
+    """Special type for parameter in `create_monitoring_new_process`."""
+    condicao: Literal["CONTEM", "NAO_CONTEM", "CONTEM_ALGUMA"]
+    termo: str
 
 
 class EscavadorAPI:
@@ -42,6 +50,10 @@ class EscavadorAPI:
 
         Returns:
             bool: Whether process number is valid.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If the provided process number is not a valid CNJ number.
         """
         # Checks if process_number is a string or int
         if not isinstance(process_number, (str, int)):
@@ -88,8 +100,6 @@ class EscavadorAPI:
                 credit balance and monthly limit.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -130,29 +140,24 @@ class EscavadorAPI:
                 information about the process.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}"
                .format(process_number=process_number))
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -174,7 +179,7 @@ class EscavadorAPI:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            limit (int):
+            limit (int, optional):
                 Limit items per page. Parameter is passed through requests.
                 Default is 50.
 
@@ -190,13 +195,14 @@ class EscavadorAPI:
                 such as page number and total items.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/movimentacoes"
                .format(process_number=process_number))
@@ -206,17 +212,11 @@ class EscavadorAPI:
         # new requests to this next url should not be charged.
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, params={"limit": limit}, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -241,7 +241,7 @@ class EscavadorAPI:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            limit (int):
+            limit (int, optional):
                 Limit items per page. Parameter is passed through requests.
                 Default is 50.
 
@@ -257,13 +257,12 @@ class EscavadorAPI:
                 such as page number and total items.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        self._validate_process_number(process_number)
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/documentos-publicos"
                .format(process_number=process_number))
@@ -281,9 +280,6 @@ class EscavadorAPI:
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -310,7 +306,7 @@ class EscavadorAPI:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            limit (int):
+            limit (int, optional):
                 Limit items per page. Parameter is passed through requests.
                 Default is 50.
 
@@ -326,13 +322,14 @@ class EscavadorAPI:
                 such as page number and total items.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/autos"
                .format(process_number=process_number))
@@ -342,17 +339,11 @@ class EscavadorAPI:
         # new requests to this next url should not be charged.
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, params={"limit": limit}, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -386,13 +377,14 @@ class EscavadorAPI:
                 the search request status.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/" +
                "{process_number}/solicitar-atualizacao"
@@ -402,17 +394,11 @@ class EscavadorAPI:
         data = {"documentos_publicos": 1}
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.post(
                 data=data, url=url, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -432,9 +418,9 @@ class EscavadorAPI:
     def request_process_update_full(
         self,
         process_number: str,
-        auth_username: str = None,
-        auth_password: str = None,
-        certificate_id: int = None,
+        auth_username: str | None = None,
+        auth_password: str | None = None,
+        certificate_id: int | None = None,
         use_certificate: bool = False):
         """Request update to complete process information using CNJ number.
 
@@ -446,18 +432,18 @@ class EscavadorAPI:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            auth_username (str):
+            auth_username (str, optional):
                 Username for user authentication.
                 Required if use_certificate is not provided.
-            auth_password (str):
+            auth_password (str, optional):
                 Password for user authentication.
                 Required if use_certificate is not provided
-            use_certificate (bool):
-                Use registered certificate for authentication.
-                Required if auth_username and auth_password is not provided.
-            certificate_id (int):
+            certificate_id (int, optional):
                 Use specific certificate ID. If not provided, a random
                 certificate will be selected.
+            use_certificate (bool, optional):
+                Use registered certificate for authentication.
+                Required if auth_username and auth_password is not provided.
 
         Returns:
             dict:
@@ -465,8 +451,6 @@ class EscavadorAPI:
                 the search request status.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -518,9 +502,6 @@ class EscavadorAPI:
 
             return response.json()
 
-        except EscavadorAPIInvalidDocumentException:
-            raise
-
         except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
@@ -550,29 +531,24 @@ class EscavadorAPI:
                 the search request status.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/status-atualizacao"
                .format(process_number=process_number))
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -603,13 +579,14 @@ class EscavadorAPI:
                 Escavador API.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         # Add punctuation to CNJ number (required for downloads)
         # Format: NNNNNNN-DD.AAAA.J.TR.OOOO
         formatted_process_number = (
@@ -627,9 +604,6 @@ class EscavadorAPI:
                        file_key=file_key))
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, timeout=60)
             response.raise_for_status()
@@ -644,9 +618,6 @@ class EscavadorAPI:
                     payload={
                         "formatted_process_number": formatted_process_number,
                         "file_key": file_key})
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -675,30 +646,25 @@ class EscavadorAPI:
                 the search request details and status.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/"
                .format(process_number=process_number) +
                "ia/resumo/solicitar-atualizacao")
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.post(
                 url=url, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -729,29 +695,24 @@ class EscavadorAPI:
                 the search request status.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/" +
                "ia/resumo/status").format(process_number=process_number)
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, params={"id": summary_id}, timeout=60)
             response.raise_for_status()
 
             return response.json()
-
-        except EscavadorAPIInvalidDocumentException:
-            raise
 
         except requests.HTTPError:
             msg = response.json().get("message")
@@ -768,15 +729,13 @@ class EscavadorAPI:
                          "process_number": process_number,
                          "summary_id": summary_id})
 
-    def get_ai_summary(self, process_number: str, summary_id: int):
+    def get_ai_summary(self, process_number: str):
         """Retrieve AI summary.
 
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            summary_id (int):
-                Summary ID returned from generation request.
 
         Returns:
             dict:
@@ -784,43 +743,589 @@ class EscavadorAPI:
                 generated AI summary, update date and summary metadata.
 
         Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/{process_number}/ia/resumo"
                .format(process_number=process_number))
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.get(
                 url=url, timeout=60)
             response.raise_for_status()
 
             return response.json()
 
-        except EscavadorAPIInvalidDocumentException:
-            raise
-
         except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"process_number": process_number,
-                         "summary_id": summary_id})
+                payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
                 payload={"error": str(e),
-                         "process_number": process_number,
-                         "summary_id": summary_id})
+                         "process_number": process_number})
 
-    # TODO: methods for monitoring new and existing processes
+    def create_monitoring_new_process(
+        self,
+        keyword: str,
+        keyword_variations: list[str] | None = None,
+        aux_keywords: list[KeywordDict] | None = None,
+        courts: list[str] | None = None):
+        """Create monitoring to search for new processes.
+
+        The monitoring will search for the keyword in newly created processes
+        and return those which match the main term or informed variations.
+
+        Args:
+            keyword (str):
+                Keyword to monitor in newly created processes.
+            keyword_variations (list, optional):
+                List of keyword variations to monitor.
+            aux_keywords (list, optional):
+                List of terms and conditions to monitor alongside the main
+                keyword. Possible conditions are:
+                    - `CONTEM`: monitoring will only alert if a process
+                    contains all the informed terms.
+                    - `NAO_CONTEM`: monitoring will alert only if a process
+                    does not contain any of the informed terms.
+                    - `CONTEM_ALGUMA`: monitoring will alert if a process
+                    contains any of the informed terms.
+            courts (list, optional):
+                List of courts where new processes should be searched for
+                (e.g.: ["TJSP", "TJMG"]).
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with the details
+                of the newly created monitoring.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL + "v2/monitoramentos/novos-processos")
+
+        # Validate json data to be sent
+        data = {"termo": keyword}
+
+        if keyword_variations is not None:
+            if len(keyword_variations) > 2:
+                msg = "keyword_variations must contain at most 2 items"
+                raise EscavadorAPIProblemAPIException(
+                    message=msg,
+                    payload={"keyword_variations": keyword_variations})
+            data["variacoes"] = keyword_variations
+
+        if aux_keywords is not None:
+            for f in aux_keywords:
+                if (f['condicao'] not in [
+                    'CONTEM', 'NAO_CONTEM', 'CONTEM_ALGUMA']):
+                    msg = ("aux_keywords conditions must be " +
+                           "CONTEM, NAO_CONTEM or CONTEM_ALGUMA")
+                    raise EscavadorAPIProblemAPIException(
+                        message=msg, payload=f)
+                if not isinstance(f['termo'], str):
+                    msg = "aux_keywords terms must be a string"
+                    raise EscavadorAPIProblemAPIException(
+                        message=msg, payload=f)
+            data["termos_auxiliares"] = aux_keywords
+
+        if courts is not None:
+            data["tribunais"] = courts
+
+        try:
+            response = self.session.post(
+                url=url, json=data, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"data": data})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "data": data})
+
+    def list_monitoring_new_process(self):
+        """Retrieve a list of new process monitorings created.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API.
+                The response contains the following keys:
+                - `items`: List of dictionaries representing active monitorings
+                for new processes.
+                - `links`: Pagination links, including the URL for the
+                next page.
+                - `paginator`: Metadata describing pagination information
+                such as page number and total items.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL + "v2/monitoramentos/novos-processos")
+
+        # TODO: validate how pagination is done.
+        # response has 'links' key with a url for the next page.
+        # new requests to this next url should not be charged.
+        # pages are in the format "v2/monitoramentos/novos-processos?page=1"
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg)
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e)})
+
+    def get_monitoring_new_process(self, monitoring_id=int):
+        """Retrieve the details of a monitoring by ID.
+
+        Args:
+            monitoring_id (int):
+                New process monitoring ID.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with details of the
+                specified monitoring.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/monitoramentos/novos-processos/{monitoring_id}"
+               .format(monitoring_id=monitoring_id))
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"monitoring_id": monitoring_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "monitoring_id": monitoring_id})
+
+    def delete_monitoring_new_process(self, monitoring_id=int):
+        """Delete a monitoring by ID.
+
+        Args:
+            monitoring_id (int):
+                New process monitoring ID.
+
+        Returns:
+            bool:
+                True if deletion is succesful.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/monitoramentos/novos-processos/{monitoring_id}"
+               .format(monitoring_id=monitoring_id))
+
+        try:
+            response = self.session.delete(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            if response.status_code == 204:
+                return True
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"monitoring_id": monitoring_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "monitoring_id": monitoring_id})
+
+    def get_results_monitoring_new_process(self, monitoring_id=int):
+        """.
+
+        Args:
+            monitoring_id (int):
+                New process monitoring ID.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API.
+                The response contains the following keys:
+                - `items`: List of dictionaries representing new processes
+                found by the monitoring.
+                - `links`: Pagination links, including the URL for the
+                next page.
+                - `paginator`: Metadata describing pagination information
+                such as page number and total items.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/monitoramentos/novos-processos/{monitoring_id}/resultados"
+               .format(monitoring_id=monitoring_id))
+
+        # TODO: validate how pagination is done.
+        # response has 'links' key with a url for the next page.
+        # new requests to this next url should not be charged.
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"monitoring_id": monitoring_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "monitoring_id": monitoring_id})
+
+    def edit_monitoring_new_process(
+        self,
+        monitoring_id: int,
+        keyword_variations: list[str] | None = None,
+        aux_keywords: list[KeywordDict] | None = None,
+        courts: list[str] | None = None):
+        """Edit previously created monitoring. Keyword cannot be edited.
+
+        Args:
+            monitoring_id (int):
+                New process monitoring ID.
+            keyword_variations (list, optional):
+                Replaces the list of keyword variations to monitor. To reset
+                this filter, pass an empty string `[]`.
+            aux_keywords (list, optional):
+                Replaces the list of terms and conditions to monitor alongside
+                the main keyword. Possible conditions are:
+                    - `CONTEM`: monitoring will only alert if a process
+                    contains all the informed terms.
+                    - `NAO_CONTEM`: monitoring will alert only if a process
+                    does not contain any of the informed terms.
+                    - `CONTEM_ALGUMA`: monitoring will alert if a process
+                    contains any of the informed terms.
+                The new auxiliary keywords will substitute the previous list.
+                To reset this filter, pass an empty string `[]`.
+            courts (list, optional):
+                List of courts where new processes should be searched for
+                (e.g.: ["TJSP", "TJMG"]). To reset this filter, pass an
+                empty string `[]`.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with the details
+                of the newly created monitoring.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/monitoramentos/novos-processos/{monitoring_id}"
+               .format(monitoring_id=monitoring_id))
+
+        data = {}
+
+        if keyword_variations is not None:
+            if len(keyword_variations) > 2:
+                msg = "keyword_variations must contain at most 2 items"
+                raise EscavadorAPIProblemAPIException(
+                    message=msg,
+                    payload={"keyword_variations": keyword_variations})
+            data["variacoes"] = keyword_variations
+
+        if aux_keywords is not None:
+            for f in aux_keywords:
+                if (f['condicao'] not in [
+                    'CONTEM', 'NAO_CONTEM', 'CONTEM_ALGUMA']):
+                    msg = ("aux_keywords conditions must be " +
+                           "CONTEM, NAO_CONTEM or CONTEM_ALGUMA")
+                    raise EscavadorAPIProblemAPIException(
+                        message=msg, payload=aux_keywords)
+                if not isinstance(f['termo'], str):
+                    msg = "aux_keywords term must be a string"
+                    raise EscavadorAPIProblemAPIException(
+                        message=msg, payload=aux_keywords)
+            data["termos_auxiliares"] = aux_keywords
+
+        if courts is not None:
+            data["tribunais"] = courts
+
+        try:
+            response = self.session.patch(
+                url=url, json=data, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"data": data})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "data": data})
+
+    def create_monitoring_existing_process(
+        self,
+        process_number: str,
+        court: str | None = None,
+        frequency: str | None = None):
+        """Create monitoring to search for new updates on an existing process.
+
+        The monitoring will search and return new publications and updates
+        of the informed process.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+            court (str, optional):
+                Court to be monitored.
+            frequency (str, optional):
+                Frequency on which the monitoring agent will search for new
+                updates. Available frequencies are `DIARIA` (default) and
+                `SEMANAL`
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with the details
+                of the newly created monitoring.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
+        url = (self.BASE_URL + "v2/monitoramentos/processos")
+
+        data = {"numero": process_number}
+        if court is not None:
+            data['tribunal'] = court
+        if frequency is not None:
+            data['frequencia'] = frequency
+
+        try:
+            response = self.session.post(
+                url=url, json=data, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"data": data})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "data": data})
+
+    def list_monitoring_existing_process(self):
+        """Retrieve a list of existing process monitorings created.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API.
+                The response contains the following keys:
+                - `items`: List of dictionaries representing active monitorings
+                for new processes.
+                - `links`: Pagination links, including the URL for the
+                next page.
+                - `paginator`: Metadata describing pagination information
+                such as page number and total items.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL + "v2/monitoramentos/processos")
+
+        # TODO: validate how pagination is done.
+        # response has 'links' key with a url for the next page.
+        # new requests to this next url should not be charged.
+        # pages are in the format "v2/monitoramentos/novos-processos?page=1"
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg)
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e)})
+
+    def get_monitoring_existing_process(self, monitoring_id: int):
+        """Retrieve a list of existing process monitorings created.
+
+        Args:
+            monitoring_id (int):
+                Existing process monitoring ID.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with details of the
+                specified monitoring.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/monitoramentos/processos/{monitoring_id}"
+               .format(monitoring_id=monitoring_id))
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"monitoring_id": monitoring_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "monitoring_id": monitoring_id})
+
+    def delete_monitoring_existing_process(self, monitoring_id=int):
+        """Delete a monitoring by ID.
+
+        Args:
+            monitoring_id (int):
+                Existing process monitoring ID.
+
+        Returns:
+            bool:
+                True if deletion is succesful.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = (self.BASE_URL +
+               "v2/monitoramentos/processos/{monitoring_id}"
+               .format(monitoring_id=monitoring_id))
+
+        try:
+            response = self.session.delete(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            if response.status_code == 204:
+                return True
+
+        except requests.HTTPError:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"monitoring_id": monitoring_id})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e),
+                         "monitoring_id": monitoring_id})
