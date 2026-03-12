@@ -1,4 +1,5 @@
 """Escavador API."""
+import re
 import requests
 from escavador_api.exceptions import (
     EscavadorAPIInvalidDocumentException,
@@ -37,7 +38,7 @@ class EscavadorAPI:
         self.session.headers.update(self.headers)
 
     def _validate_process_number(self, process_number: str):
-        """Check process number validation.
+        """Validate process number.
 
         - Must have exactly 20 digits.
         - First 7 digits must follow a specific sequence.
@@ -90,6 +91,32 @@ class EscavadorAPI:
                 payload={"process_number": process_number})
 
         return True
+
+    def _paginate(self, url: str, params: dict | None = None):
+        """Helper function to iterate through paginated responses.
+
+        Args:
+            url (str):
+                Initial request URL.
+            params (dict, optional):
+                Query parameters for the first request.
+
+        Yields:
+            dict:
+                Individual items returned by the API.
+        """
+        while url is not None:
+            response = self.session.get(
+                url=url, params=params, timeout=60)
+            response.raise_for_status()
+
+            data = response.json()
+
+            for item in data.get("items", []):
+                yield item
+
+            params = None
+            url = data.get("links", {}).get("next")
 
     def get_credit_balance(self):
         """Returns current credit balance.
@@ -172,27 +199,18 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    def get_process_movements(self, process_number: str, limit: int = 50):
+    def get_process_movements(self, process_number: str):
         """Retrieve process movements from Escavador using CNJ number.
 
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            limit (int, optional):
-                Limit items per page. Parameter is passed through requests.
-                Default is 50.
 
         Returns:
-            dict:
-                JSON response returned by the Escavador API.
-                The response contains the following keys:
-                - `items`: List of dictionaries representing public documents
-                associated with the process.
-                - `links`: Pagination links, including the URL for the
-                next page.
-                - `paginator`: Metadata describing pagination information
-                such as page number and total items.
+            list:
+                List of dictionaries representing movements associated with
+                the process.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -207,54 +225,34 @@ class EscavadorAPI:
                "v2/processos/numero_cnj/{process_number}/movimentacoes"
                .format(process_number=process_number))
 
-        # TODO: validate how pagination is done.
-        # response has 'links' key with a url for the next page.
-        # new requests to this next url should not be charged.
-
         try:
-            response = self.session.get(
-                url=url, params={"limit": limit}, timeout=60)
-            response.raise_for_status()
+            return list(self._paginate(url))
 
-            return response.json()
-
-        except requests.HTTPError:
-            msg = response.json().get("message")
+        except requests.HTTPError as e:
+            msg = e.response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"process_number": process_number,
-                         "limit": limit})
+                payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
                 payload={"error": str(e),
-                         "process_number": process_number,
-                         "limit": limit})
+                         "process_number": process_number})
 
-    def get_process_public_documents(
-        self, process_number: str, limit: int = 50):
+    def get_process_public_documents(self, process_number: str):
         """Retrieve available public documents associated with a CNJ number.
 
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            limit (int, optional):
-                Limit items per page. Parameter is passed through requests.
-                Default is 50.
 
         Returns:
-            dict:
-                JSON response returned by the Escavador API.
-                The response contains the following keys:
-                - `items`: List of dictionaries representing public documents
+            list:
+                List of dictionaries representing public documents
                 associated with the process.
-                - `links`: Pagination links, including the URL for the
-                next page.
-                - `paginator`: Metadata describing pagination information
-                such as page number and total items.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -267,36 +265,23 @@ class EscavadorAPI:
                "v2/processos/numero_cnj/{process_number}/documentos-publicos"
                .format(process_number=process_number))
 
-        # TODO: validate how pagination is done.
-        # response has 'links' key with a url for the next page.
-        # new requests to this next url should not be charged.
-
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
+            return list(self._paginate(url))
 
-            response = self.session.get(
-                url=url, params={"limit": limit}, timeout=60)
-            response.raise_for_status()
-
-            return response.json()
-
-        except requests.HTTPError:
-            msg = response.json().get("message")
+        except requests.HTTPError as e:
+            msg = e.response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"process_number": process_number,
-                         "limit": limit})
+                payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
                 payload={"error": str(e),
-                         "process_number": process_number,
-                         "limit": limit})
+                         "process_number": process_number})
 
-    def get_process_all_documents(self, process_number: str, limit: int = 50):
+    def get_process_all_documents(self, process_number: str):
         """Retrieve all available documents associated with a CNJ number.
 
         This method includes public and restricted documents (when available
@@ -306,20 +291,11 @@ class EscavadorAPI:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            limit (int, optional):
-                Limit items per page. Parameter is passed through requests.
-                Default is 50.
 
         Returns:
-            dict:
-                JSON response returned by the Escavador API.
-                The response contains the following keys:
-                - `items`: List of dictionaries representing public documents
+            list:
+                List of dictionaries representing all documents
                 associated with the process.
-                - `links`: Pagination links, including the URL for the
-                next page.
-                - `paginator`: Metadata describing pagination information
-                such as page number and total items.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -334,31 +310,21 @@ class EscavadorAPI:
                "v2/processos/numero_cnj/{process_number}/autos"
                .format(process_number=process_number))
 
-        # TODO: validate how pagination is done. currently page has 50 items.
-        # response has 'links' key with a url for the next page.
-        # new requests to this next url should not be charged.
-
         try:
-            response = self.session.get(
-                url=url, params={"limit": limit}, timeout=60)
-            response.raise_for_status()
+            return list(self._paginate(url))
 
-            return response.json()
-
-        except requests.HTTPError:
-            msg = response.json().get("message")
+        except requests.HTTPError as e:
+            msg = e.response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"process_number": process_number,
-                         "limit": limit})
+                payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
                 payload={"error": str(e),
-                         "process_number": process_number,
-                         "limit": limit})
+                         "process_number": process_number})
 
     def request_process_update_public(self, process_number: str):
         """Request update to public process information using CNJ number.
@@ -443,7 +409,7 @@ class EscavadorAPI:
                 certificate will be selected.
             use_certificate (bool, optional):
                 Use registered certificate for authentication.
-                Required if auth_username and auth_password is not provided.
+                Required if auth_username and auth_password are not provided.
 
         Returns:
             dict:
@@ -456,6 +422,9 @@ class EscavadorAPI:
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        # Checks if process number is valid before sending request
+        self._validate_process_number(process_number)
+
         url = (self.BASE_URL +
                "v2/processos/numero_cnj/" +
                "{process_number}/solicitar-atualizacao"
@@ -467,20 +436,17 @@ class EscavadorAPI:
 
         if not (has_user_auth or use_certificate):
             raise EscavadorAPIProblemAPIException(
-                message="Authentication required for restricted documents."
-            )
+                message="Authentication required for restricted documents.")
 
         if has_user_auth and use_certificate:
             raise EscavadorAPIProblemAPIException(
                 message=("Use username/password OR " +
-                         "certificate authentication, not both.")
-            )
+                         "certificate authentication, not both."))
 
         if certificate_id is not None and not use_certificate:
             raise EscavadorAPIProblemAPIException(
                 message=("'certificate_id' provided but " +
-                         "'use_certificate' is set to False.")
-            )
+                         "'use_certificate' is set to False."))
 
         # Build payload
         data = {"autos": 1}
@@ -493,9 +459,6 @@ class EscavadorAPI:
             data["certificado_id"] = certificate_id
 
         try:
-            # Checks if process number is valid before sending request
-            self._validate_process_number(process_number)
-
             response = self.session.post(
                 data=data, url=url, timeout=60)
             response.raise_for_status()
@@ -587,8 +550,10 @@ class EscavadorAPI:
         # Checks if process number is valid before sending request
         self._validate_process_number(process_number)
 
-        # Add punctuation to CNJ number (required for downloads)
+        # Clean special characters from CNJ number and
+        # ensure correct punctuation (required for downloads)
         # Format: NNNNNNN-DD.AAAA.J.TR.OOOO
+        process_number = re.sub(r'\D', '', process_number)
         formatted_process_number = (
             f"{process_number[0:7]}-"
             f"{process_number[7:9]}."
@@ -608,7 +573,7 @@ class EscavadorAPI:
                 url=url, timeout=60)
             response.raise_for_status()
 
-            if response.headers['Content-Type'] == 'application/pdf':
+            if response.headers.get('Content-Type') == 'application/pdf':
                 return response.content
 
             else:
@@ -829,17 +794,19 @@ class EscavadorAPI:
             data["variacoes"] = keyword_variations
 
         if aux_keywords is not None:
-            for f in aux_keywords:
-                if (f['condicao'] not in [
+            for key in aux_keywords:
+                if (key['condicao'] not in [
                     'CONTEM', 'NAO_CONTEM', 'CONTEM_ALGUMA']):
                     msg = ("aux_keywords conditions must be " +
                            "CONTEM, NAO_CONTEM or CONTEM_ALGUMA")
                     raise EscavadorAPIProblemAPIException(
-                        message=msg, payload=f)
-                if not isinstance(f['termo'], str):
-                    msg = "aux_keywords terms must be a string"
+                        message=msg, payload=aux_keywords)
+
+                if not isinstance(key['termo'], str):
+                    msg = "aux_keywords term must be a string"
                     raise EscavadorAPIProblemAPIException(
-                        message=msg, payload=f)
+                        message=msg, payload=aux_keywords)
+
             data["termos_auxiliares"] = aux_keywords
 
         if courts is not None:
@@ -869,15 +836,9 @@ class EscavadorAPI:
         """Retrieve a list of new process monitorings created.
 
         Returns:
-            dict:
-                JSON response returned by the Escavador API.
-                The response contains the following keys:
-                - `items`: List of dictionaries representing active monitorings
+            list:
+                List of dictionaries representing active monitorings
                 for new processes.
-                - `links`: Pagination links, including the URL for the
-                next page.
-                - `paginator`: Metadata describing pagination information
-                such as page number and total items.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -887,20 +848,11 @@ class EscavadorAPI:
         """
         url = (self.BASE_URL + "v2/monitoramentos/novos-processos")
 
-        # TODO: validate how pagination is done.
-        # response has 'links' key with a url for the next page.
-        # new requests to this next url should not be charged.
-        # pages are in the format "v2/monitoramentos/novos-processos?page=1"
-
         try:
-            response = self.session.get(
-                url=url, timeout=60)
-            response.raise_for_status()
+            return list(self._paginate(url))
 
-            return response.json()
-
-        except requests.HTTPError:
-            msg = response.json().get("message")
+        except requests.HTTPError as e:
+            msg = e.response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg)
 
@@ -910,7 +862,7 @@ class EscavadorAPI:
                 message=msg,
                 payload={"error": str(e)})
 
-    def get_monitoring_new_process(self, monitoring_id=int):
+    def get_monitoring_new_process(self, monitoring_id: int):
         """Retrieve the details of a monitoring by ID.
 
         Args:
@@ -952,7 +904,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    def delete_monitoring_new_process(self, monitoring_id=int):
+    def delete_monitoring_new_process(self, monitoring_id: int):
         """Delete a monitoring by ID.
 
         Args:
@@ -961,7 +913,7 @@ class EscavadorAPI:
 
         Returns:
             bool:
-                True if deletion is succesful.
+                True if deletion is successful.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -994,23 +946,17 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    def get_results_monitoring_new_process(self, monitoring_id=int):
-        """.
+    def get_results_monitoring_new_process(self, monitoring_id: int):
+        """Retrieve the results of a new process monitoring.
 
         Args:
             monitoring_id (int):
                 New process monitoring ID.
 
         Returns:
-            dict:
-                JSON response returned by the Escavador API.
-                The response contains the following keys:
-                - `items`: List of dictionaries representing new processes
+            list:
+                List of dictionaries representing new processes
                 found by the monitoring.
-                - `links`: Pagination links, including the URL for the
-                next page.
-                - `paginator`: Metadata describing pagination information
-                such as page number and total items.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -1022,19 +968,11 @@ class EscavadorAPI:
                "v2/monitoramentos/novos-processos/{monitoring_id}/resultados"
                .format(monitoring_id=monitoring_id))
 
-        # TODO: validate how pagination is done.
-        # response has 'links' key with a url for the next page.
-        # new requests to this next url should not be charged.
-
         try:
-            response = self.session.get(
-                url=url, timeout=60)
-            response.raise_for_status()
+            return list(self._paginate(url))
 
-            return response.json()
-
-        except requests.HTTPError:
-            msg = response.json().get("message")
+        except requests.HTTPError as e:
+            msg = e.response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={"monitoring_id": monitoring_id})
@@ -1059,7 +997,7 @@ class EscavadorAPI:
                 New process monitoring ID.
             keyword_variations (list, optional):
                 Replaces the list of keyword variations to monitor. To reset
-                this filter, pass an empty string `[]`.
+                this filter, pass an empty list `[]`.
             aux_keywords (list, optional):
                 Replaces the list of terms and conditions to monitor alongside
                 the main keyword. Possible conditions are:
@@ -1070,16 +1008,16 @@ class EscavadorAPI:
                     - `CONTEM_ALGUMA`: monitoring will alert if a process
                     contains any of the informed terms.
                 The new auxiliary keywords will substitute the previous list.
-                To reset this filter, pass an empty string `[]`.
+                To reset this filter, pass an empty list `[]`.
             courts (list, optional):
                 List of courts where new processes should be searched for
                 (e.g.: ["TJSP", "TJMG"]). To reset this filter, pass an
-                empty string `[]`.
+                empty list `[]`.
 
         Returns:
             dict:
                 JSON response returned by the Escavador API with the details
-                of the newly created monitoring.
+                of the updated monitoring.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -1102,17 +1040,19 @@ class EscavadorAPI:
             data["variacoes"] = keyword_variations
 
         if aux_keywords is not None:
-            for f in aux_keywords:
-                if (f['condicao'] not in [
+            for key in aux_keywords:
+                if (key['condicao'] not in [
                     'CONTEM', 'NAO_CONTEM', 'CONTEM_ALGUMA']):
                     msg = ("aux_keywords conditions must be " +
                            "CONTEM, NAO_CONTEM or CONTEM_ALGUMA")
                     raise EscavadorAPIProblemAPIException(
                         message=msg, payload=aux_keywords)
-                if not isinstance(f['termo'], str):
+
+                if not isinstance(key['termo'], str):
                     msg = "aux_keywords term must be a string"
                     raise EscavadorAPIProblemAPIException(
                         message=msg, payload=aux_keywords)
+
             data["termos_auxiliares"] = aux_keywords
 
         if courts is not None:
@@ -1157,7 +1097,7 @@ class EscavadorAPI:
             frequency (str, optional):
                 Frequency on which the monitoring agent will search for new
                 updates. Available frequencies are `DIARIA` (default) and
-                `SEMANAL`
+                `SEMANAL`.
 
         Returns:
             dict:
@@ -1205,15 +1145,9 @@ class EscavadorAPI:
         """Retrieve a list of existing process monitorings created.
 
         Returns:
-            dict:
-                JSON response returned by the Escavador API.
-                The response contains the following keys:
-                - `items`: List of dictionaries representing active monitorings
-                for new processes.
-                - `links`: Pagination links, including the URL for the
-                next page.
-                - `paginator`: Metadata describing pagination information
-                such as page number and total items.
+            list:
+                List of dictionaries representing active monitorings
+                for existing processes.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -1223,20 +1157,11 @@ class EscavadorAPI:
         """
         url = (self.BASE_URL + "v2/monitoramentos/processos")
 
-        # TODO: validate how pagination is done.
-        # response has 'links' key with a url for the next page.
-        # new requests to this next url should not be charged.
-        # pages are in the format "v2/monitoramentos/novos-processos?page=1"
-
         try:
-            response = self.session.get(
-                url=url, timeout=60)
-            response.raise_for_status()
+            return list(self._paginate(url))
 
-            return response.json()
-
-        except requests.HTTPError:
-            msg = response.json().get("message")
+        except requests.HTTPError as e:
+            msg = e.response.json().get("message")
             raise EscavadorAPIProblemAPIException(
                 message=msg)
 
@@ -1247,7 +1172,7 @@ class EscavadorAPI:
                 payload={"error": str(e)})
 
     def get_monitoring_existing_process(self, monitoring_id: int):
-        """Retrieve a list of existing process monitorings created.
+        """Retrieve the details of a monitoring by ID.
 
         Args:
             monitoring_id (int):
@@ -1255,8 +1180,8 @@ class EscavadorAPI:
 
         Returns:
             dict:
-                JSON response returned by the Escavador API with details of the
-                specified monitoring.
+                JSON response returned by the Escavador API with details of
+                the specified monitoring.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -1288,7 +1213,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    def delete_monitoring_existing_process(self, monitoring_id=int):
+    def delete_monitoring_existing_process(self, monitoring_id: int):
         """Delete a monitoring by ID.
 
         Args:
@@ -1297,7 +1222,7 @@ class EscavadorAPI:
 
         Returns:
             bool:
-                True if deletion is succesful.
+                True if deletion is successful.
 
         Raises:
             EscavadorAPIProblemAPIException:
