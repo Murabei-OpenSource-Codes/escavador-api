@@ -8,11 +8,21 @@ from escavador_api.exceptions import (
 )
 from tenacity import (
     retry,
-    retry_if_not_exception_type,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_fixed,
 )
 from typing import Literal, TypedDict
+
+
+def _retry_on_network_errors(func):
+    """Decorator to retry on network errors (ConnectionError, Timeout)."""
+    return retry(
+        retry=retry_if_exception_type(
+            (requests.ConnectionError, requests.Timeout)),
+        stop=stop_after_attempt(5),
+        wait=wait_fixed(3),
+        reraise=True)(func)
 
 
 # Special type for aux_keyword parameter
@@ -98,7 +108,7 @@ class EscavadorAPI:
 
         return True
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def _paginate(self, url: str, params: dict | None = None):
         """Helper function to iterate through paginated responses.
 
@@ -125,7 +135,7 @@ class EscavadorAPI:
             params = None
             url = data.get("links", {}).get("next")
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def get_credit_balance(self):
         """Returns current credit balance.
 
@@ -161,13 +171,7 @@ class EscavadorAPI:
                 message=msg,
                 payload={"error": str(e)})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_process_info(self, process_number: str):
         """Retrieve process information from Escavador using CNJ number.
 
@@ -214,13 +218,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_process_movements(self, process_number: str):
         """Retrieve process movements from Escavador using CNJ number.
 
@@ -263,13 +261,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_process_public_documents(self, process_number: str):
         """Retrieve available public documents associated with a CNJ number.
 
@@ -310,13 +302,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_process_all_documents(self, process_number: str):
         """Retrieve all available documents associated with a CNJ number.
 
@@ -362,13 +348,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def request_process_update_public(self, process_number: str):
         """Request update to public process information using CNJ number.
 
@@ -424,13 +404,7 @@ class EscavadorAPI:
                          "process_number": process_number,
                          "data": data})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def request_process_update_full(
         self,
         process_number: str,
@@ -530,13 +504,7 @@ class EscavadorAPI:
                          "process_number": process_number,
                          "data": data})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_process_update_status(self, process_number: str):
         """Retrieve search request status.
 
@@ -583,13 +551,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def download_process_file(self, process_number: str, file_key: str):
         """Download PDF file of process documents.
 
@@ -661,13 +623,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def request_ai_summary(self, process_number: str):
         """Request a summary of available process information using CNJ number.
 
@@ -715,13 +671,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_ai_summary_status(self, process_number: str, summary_id: int):
         """Retrieve AI summary generation status.
 
@@ -772,13 +722,7 @@ class EscavadorAPI:
                          "process_number": process_number,
                          "summary_id": summary_id})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def get_ai_summary(self, process_number: str):
         """Retrieve AI summary.
 
@@ -825,7 +769,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "process_number": process_number})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def create_monitoring_new_process(
         self,
         keyword: str,
@@ -918,7 +862,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "data": data})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def list_monitoring_new_process(self):
         """Retrieve a list of new process monitorings created.
 
@@ -949,7 +893,7 @@ class EscavadorAPI:
                 message=msg,
                 payload={"error": str(e)})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def get_monitoring_new_process(self, monitoring_id: int):
         """Retrieve the details of a monitoring by ID.
 
@@ -992,7 +936,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def delete_monitoring_new_process(self, monitoring_id: int):
         """Delete a monitoring by ID.
 
@@ -1035,7 +979,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def get_results_monitoring_new_process(self, monitoring_id: int):
         """Retrieve the results of a new process monitoring.
 
@@ -1074,7 +1018,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def edit_monitoring_new_process(
         self,
         monitoring_id: int,
@@ -1169,13 +1113,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "data": data})
 
-    @retry(
-        retry=retry_if_not_exception_type(
-            EscavadorAPIInvalidDocumentException),
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(5),
-        reraise=True,
-    )
+    @_retry_on_network_errors
     def create_monitoring_existing_process(
         self,
         process_number: str,
@@ -1239,7 +1177,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "data": data})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def list_monitoring_existing_process(self):
         """Retrieve a list of existing process monitorings created.
 
@@ -1270,7 +1208,7 @@ class EscavadorAPI:
                 message=msg,
                 payload={"error": str(e)})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def get_monitoring_existing_process(self, monitoring_id: int):
         """Retrieve the details of a monitoring by ID.
 
@@ -1313,7 +1251,7 @@ class EscavadorAPI:
                 payload={"error": str(e),
                          "monitoring_id": monitoring_id})
 
-    @retry(stop=stop_after_attempt(5), wait=wait_fixed(5), reraise=True)
+    @_retry_on_network_errors
     def delete_monitoring_existing_process(self, monitoring_id: int):
         """Delete a monitoring by ID.
 
