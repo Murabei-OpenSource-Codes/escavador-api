@@ -12,8 +12,56 @@ class TestEscavadorAPI(unittest.TestCase):
     """Test EscavadorAPI methods."""
 
     def setUp(self):
-        """Set up test fixtures."""
+        """Set up test fixtures and clean existing monitorings."""
         self.escavador_api = EscavadorAPI(ESCAVADOR_AUTH_TOKEN)
+
+        # cleanup new process monitorings
+        try:
+            for monitoring in (self.escavador_api
+                               .list_monitoring_new_process()):
+                monitoring_id = monitoring.get("id")
+                if monitoring_id is not None:
+                    (self.escavador_api
+                     .delete_monitoring_new_process(monitoring_id))
+
+        except Exception:  # noqa
+            pass
+
+        # cleanup existing process monitorings
+        try:
+            for monitoring in (self.escavador_api
+                               .list_monitoring_existing_process()):
+                monitoring_id = monitoring.get("id")
+                if monitoring_id is not None:
+                    (self.escavador_api
+                     .delete_monitoring_existing_process(monitoring_id))
+
+        except Exception: # noqa
+            pass
+
+    def tearDown(self):
+        """Ensure monitorings are removed after each test."""
+        try:
+            for monitoring in (self.escavador_api
+                               .list_monitoring_new_process()):
+                monitoring_id = monitoring.get("id")
+                if monitoring_id is not None:
+                    (self.escavador_api
+                     .delete_monitoring_new_process(monitoring_id))
+
+        except Exception: # noqa
+            pass
+
+        try:
+            for monitoring in (self.escavador_api
+                               .list_monitoring_existing_process()):
+                monitoring_id = monitoring.get("id")
+                if monitoring_id is not None:
+                    (self.escavador_api
+                     .delete_monitoring_existing_process(monitoring_id))
+
+        except Exception: # noqa
+            pass
 
     def test_init(self):
         """Test EscavadorAPI initialization."""
@@ -52,42 +100,42 @@ class TestEscavadorAPI(unittest.TestCase):
         """Test get_credit_balance method."""
         result = self.escavador_api.get_credit_balance()
         self.assertEqual(
-            list(result.keys()),
-            ['quantidade_creditos', 'saldo',
-             'saldo_descricao', 'limite_mensal'])
+            set(result.keys()),
+            {'quantidade_creditos', 'saldo',
+             'saldo_descricao', 'limite_mensal'})
 
     def test_get_process_info(self):
         """Test get_process_info method."""
         result = self.escavador_api.get_process_info(
             process_number=TEST_PROCESS_NUMBER)
         self.assertEqual(
-            list(result.keys()),
-            ['numero_cnj', 'titulo_polo_ativo', 'titulo_polo_passivo',
+            set(result.keys()),
+            {'numero_cnj', 'titulo_polo_ativo', 'titulo_polo_passivo',
              'ano_inicio', 'data_inicio', 'estado_origem', 'unidade_origem',
              'data_ultima_movimentacao', 'quantidade_movimentacoes',
              'fontes_tribunais_estao_arquivadas', 'data_ultima_verificacao',
              'tempo_desde_ultima_verificacao', 'processos_relacionados',
-             'fontes'])
+             'monitoramento_id', 'fontes'})
 
-    def test_get_process_movements(self):
+    def test_get_process_updates(self):
         """Test get_process_movements method."""
-        result = self.escavador_api.get_process_movements(
+        result = self.escavador_api.get_process_updates(
             process_number=TEST_PROCESS_NUMBER)
         self.assertEqual(
             len(result), 17)
         self.assertEqual(
-            list(result[0].keys()),
-            ['id', 'data', 'tipo', 'pagina', 'tipo_publicacao',
-             'classificacao_predita', 'conteudo', 'texto_categoria', 'fonte'])
+            set(result[0].keys()),
+            {'id', 'data', 'tipo', 'pagina', 'tipo_publicacao',
+             'classificacao_predita', 'conteudo', 'texto_categoria', 'fonte'})
 
     def test_request_process_update_public(self):
         """Test process update methods."""
         result = self.escavador_api.get_process_update_status(
             process_number=TEST_PROCESS_NUMBER)
         self.assertEqual(
-            list(result.keys()),
-            ['numero_cnj', 'data_ultima_verificacao',
-             'tempo_desde_ultima_verificacao', 'ultima_verificacao', 'opcoes'])
+            set(result.keys()),
+            {'numero_cnj', 'data_ultima_verificacao',
+             'tempo_desde_ultima_verificacao', 'ultima_verificacao', 'opcoes'})
 
     def test_request_ai_summary(self):
         """Test request_ai_summary method."""
@@ -98,8 +146,8 @@ class TestEscavadorAPI(unittest.TestCase):
             result = self.escavador_api.get_ai_summary_status(
                 process_number=TEST_PROCESS_NUMBER, summary_id=summary_id)
             self.assertEqual(
-                list(result.keys()),
-                ['id', 'status', 'criado_em', 'numero_cnj', 'concluido_em'])
+                set(result.keys()),
+                {'id', 'status', 'criado_em', 'numero_cnj', 'concluido_em'})
 
     def test_monitoring_new_process(self):
         """Test methods associated with new process monitoring."""
@@ -116,9 +164,9 @@ class TestEscavadorAPI(unittest.TestCase):
             courts=courts)
         monitoring_id = result.get('id')
         self.assertEqual(
-            list(result.keys()),
-            ['id', 'termo', 'criado_em', 'variacoes', 'termos_auxiliares',
-             'tribunais_especificos'])
+            set(result.keys()),
+            {'id', 'termo', 'tipo', 'esta_desativado', 'criado_em',
+             'variacoes', 'termos_auxiliares', 'tribunais_especificos'})
         self.assertEqual(
             keyword, result.get('termo'))
         self.assertEqual(
@@ -138,9 +186,9 @@ class TestEscavadorAPI(unittest.TestCase):
             aux_keywords=new_aux_keywords,
             courts=new_courts)
         self.assertEqual(
-            list(result.keys()),
-            ['id', 'termo', 'criado_em', 'variacoes', 'termos_auxiliares',
-             'tribunais_especificos'])
+            set(result.keys()),
+            {'id', 'termo', 'tipo', 'esta_desativado', 'criado_em',
+             'variacoes', 'termos_auxiliares', 'tribunais_especificos'})
         self.assertEqual(
             new_keyword_variations, result.get('variacoes'))
         self.assertEqual(
@@ -164,9 +212,9 @@ class TestEscavadorAPI(unittest.TestCase):
             frequency=frequency)
         monitoring_id = result.get('id')
         self.assertEqual(
-            list(result.keys()),
-            ['id', 'numero', 'criado_em', 'data_ultima_verificacao',
-             'tribunais', 'frequencia', 'status'])
+            set(result.keys()),
+            {'id', 'numero', 'criado_em', 'data_ultima_verificacao',
+             'tribunais', 'frequencia', 'status'})
         self.assertEqual(
             court, result.get('tribunais')[0].get('sigla'))
         self.assertEqual(

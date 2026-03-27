@@ -219,8 +219,8 @@ class EscavadorAPI:
                          "process_number": process_number})
 
     @_retry_on_network_errors
-    def get_process_movements(self, process_number: str):
-        """Retrieve process movements from Escavador using CNJ number.
+    def get_process_updates(self, process_number: str):
+        """Retrieve process updates from Escavador using CNJ number.
 
         Args:
             process_number (str):
@@ -229,7 +229,7 @@ class EscavadorAPI:
 
         Returns:
             list:
-                List of dictionaries representing movements associated with
+                List of dictionaries representing updates associated with
                 the process.
 
         Raises:
