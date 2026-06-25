@@ -172,6 +172,43 @@ class EscavadorAPI:
                 payload={"error": str(e)})
 
     @_retry_on_network_errors
+    def get_courts(self):
+        """List all available courts for searches in Escavador.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with current
+                credit balance and monthly limit.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = self.BASE_URL + "v2/tribunais"
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError as e:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"error": str(e)})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e)})
+
+
+    @_retry_on_network_errors
     def get_process_info(self, process_number: str):
         """Retrieve process information from Escavador using CNJ number.
 
