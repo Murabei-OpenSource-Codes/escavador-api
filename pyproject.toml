@@ -1,6 +1,6 @@
 [project]
 name = "escavador-api"
-version = "0.1.6"
+version = "0.1.7"
 description = "Python API to interact with Escavador endpoints"
 authors = [
     {name = "Murabei Data Science",email = "a.baceti@murabei.com"}
