@@ -672,15 +672,13 @@ class EscavadorAPI:
                          "process_number": process_number})
 
     @_retry_on_network_errors
-    def get_ai_summary_status(self, process_number: str, summary_id: int):
+    def get_ai_summary_status(self, process_number: str):
         """Retrieve AI summary generation status.
 
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
-            summary_id (int):
-                Summary ID returned from generation request.
 
         Returns:
             dict:
@@ -701,8 +699,7 @@ class EscavadorAPI:
                "ia/resumo/status").format(process_number=process_number)
 
         try:
-            response = self.session.get(
-                url=url, params={"id": summary_id}, timeout=60)
+            response = self.session.get(url=url, timeout=60)
             response.raise_for_status()
 
             return response.json()
@@ -710,17 +707,13 @@ class EscavadorAPI:
         except requests.HTTPError:
             msg = response.json().get("message")
             raise EscavadorAPIProblemAPIException(
-                message=msg,
-                payload={"process_number": process_number,
-                         "summary_id": summary_id})
+                message=msg, payload={"process_number": process_number})
 
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
-                payload={"error": str(e),
-                         "process_number": process_number,
-                         "summary_id": summary_id})
+                payload={"error": str(e), "process_number": process_number})
 
     @_retry_on_network_errors
     def get_ai_summary(self, process_number: str):

@@ -2,7 +2,7 @@
 import os
 import unittest
 from escavador_api.data import EscavadorAPI
-from escavador_api.exceptions import EscavadorAPIInvalidDocumentException
+from escavador_api.exceptions import EscavadorAPIInvalidDocumentException, EscavadorAPIException
 
 ESCAVADOR_AUTH_TOKEN = os.getenv("ESCAVADOR_AUTH_TOKEN")
 TEST_PROCESS_NUMBER = os.getenv("TEST_PROCESS_NUMBER")
@@ -115,7 +115,7 @@ class TestEscavadorAPI(unittest.TestCase):
              'data_ultima_movimentacao', 'quantidade_movimentacoes',
              'fontes_tribunais_estao_arquivadas', 'data_ultima_verificacao',
              'tempo_desde_ultima_verificacao', 'processos_relacionados',
-             'monitoramento_id', 'fontes'})
+             'monitoramento_id', 'fontes', 'id'})
 
     def test_get_process_updates(self):
         """Test get_process_movements method."""
@@ -139,15 +139,18 @@ class TestEscavadorAPI(unittest.TestCase):
 
     def test_request_ai_summary(self):
         """Test request_ai_summary method."""
-        summary_id = self.escavador_api.request_ai_summary(
-            process_number=TEST_PROCESS_NUMBER).get('id')
-
-        if summary_id is not None:
+        try:
             result = self.escavador_api.get_ai_summary_status(
-                process_number=TEST_PROCESS_NUMBER, summary_id=summary_id)
+                process_number=TEST_PROCESS_NUMBER)
             self.assertEqual(
                 set(result.keys()),
                 {'id', 'status', 'criado_em', 'numero_cnj', 'concluido_em'})
+        except EscavadorAPIException as e:
+            # case summary was already requested, the message should match
+            expected_error = (
+                "Resumo inteligente já solicitado nas últimas 24 horas"
+                " e não há novas movimentações para atualização.")
+            self.assertEqual(e.message, expected_error)
 
     def test_monitoring_new_process(self):
         """Test methods associated with new process monitoring."""
