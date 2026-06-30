@@ -1,0 +1,4 @@
+requests>=2.32.5,<3.0.0
+tenacity>=9.1.4,<10.0.0
+pdoc
+poetry
