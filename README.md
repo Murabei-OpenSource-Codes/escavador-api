@@ -1,17 +1,44 @@
 # escavador-api
 
-A Python library for interacting with the Escavador API, providing access to Brazilian legal process data, documents, and monitoring services.
+A Python library for interacting with the Escavador API, providing access
+to Brazilian legal process data, documents, and monitoring services.
+
+## Objective and motivation
+
+Python client for the Escavador HTTP API: Brazilian legal process data,
+documents, AI summaries and monitoring services.
+
+### Why this exists
+Escavador exposes court and process endpoints over HTTP with auth tokens
+and credit billing. This library wraps those calls with CNJ validation,
+pagination, retries, and typed exceptions so Murabei (and other) services
+do not reimplement the same client logic.
+
+### How it is used
+Import `EscavadorAPI`, pass an Escavador auth token, and call methods for
+process lookup, documents, updates, monitoring, and credits. Typical
+consumers are ETL workers and internal tools that need structured process
+data.
+
+### Scope
+In scope: Escavador REST client behavior (requests, retries, error
+mapping). Out of scope: Escavador account management, credit purchase,
+and downstream storage or ETL orchestration.
 
 ## Features
 
-- **Process Information**: Retrieve detailed information about legal processes using CNJ numbers
-- **Process Movements**: Get chronological movement history of legal processes
+- **Process Information**: Retrieve detailed information about legal
+  processes using CNJ numbers
+- **Process Updates**: Get chronological update history of legal processes
+- **Court Listing**: List available courts for searches
 - **Document Access**: Download public and restricted process documents
 - **AI Summaries**: Generate and retrieve AI-powered process summaries
-- **Process Monitoring**: Set up monitoring for new processes or updates to existing processes
+- **Process Monitoring**: Set up monitoring for new processes or updates
+  to existing processes
 - **Credit Management**: Check API usage credits and limits
-- **Process Updates**: Request fresh data updates from court sources
-- **Retry Logic**: Automatic retry with 5-second delays for network failures (max 5 retries)
+- **Court Data Refresh**: Request fresh data updates from court sources
+- **Retry Logic**: Automatic retry with 5-second delays for network
+  failures (max 5 retries)
 
 ## Installation
 
@@ -58,6 +85,8 @@ EscavadorAPI(escavador_auth_token: str)
 
 ### Core Methods
 
+Methods marked **(paid)** consume Escavador API credits.
+
 #### Credit Management
 
 ```python
@@ -65,37 +94,45 @@ get_credit_balance() -> dict
 ```
 Returns current credit balance and monthly limits.
 
+#### Courts
+
+```python
+get_courts() -> dict
+```
+List all available courts for searches in Escavador.
+
 #### Process Information
 
 ```python
 get_process_info(process_number: str) -> dict
 ```
-Retrieve basic process information.
+Retrieve basic process information. **(paid)**
 
 **Parameters:**
-- `process_number` (str): CNJ process number (20 digits, punctuation optional)
+- `process_number` (str): CNJ process number (20 digits, punctuation
+  optional)
 
 ```python
-get_process_movements(process_number: str) -> list
+get_process_updates(process_number: str) -> list
 ```
-Get all movements for a process.
+Get all updates for a process. **(paid)**
 
 ```python
 get_process_public_documents(process_number: str) -> list
 ```
-Get publicly available documents.
+Get publicly available documents. **(paid)**
 
 ```python
 get_process_all_documents(process_number: str) -> list
 ```
-Get all documents (public and restricted, if authorized).
+Get all documents (public and restricted, if authorized). **(paid)**
 
 #### Process Updates
 
 ```python
 request_process_update_public(process_number: str) -> dict
 ```
-Request update of public process information.
+Request update of public process information. **(paid)**
 
 ```python
 request_process_update_full(
@@ -106,36 +143,36 @@ request_process_update_full(
     use_certificate: bool = False
 ) -> dict
 ```
-Request full update including restricted documents.
+Request full update including restricted documents. **(paid)**
 
 ```python
 get_process_update_status(process_number: str) -> dict
 ```
-Check the status of an update request.
+Check the status of an update request. **(paid)**
 
 #### Document Downloads
 
 ```python
 download_process_file(process_number: str, file_key: str) -> bytes
 ```
-Download a specific document as PDF bytes.
+Download a specific document as PDF bytes. **(paid)**
 
 #### AI Summaries
 
 ```python
 request_ai_summary(process_number: str) -> dict
 ```
-Request generation of an AI summary.
+Request generation of an AI summary. **(paid)**
 
 ```python
-get_ai_summary_status(process_number: str, summary_id: int) -> dict
+get_ai_summary_status(process_number: str) -> dict
 ```
 Check AI summary generation status.
 
 ```python
 get_ai_summary(process_number: str) -> dict
 ```
-Retrieve the generated AI summary.
+Retrieve the generated AI summary. **(paid)**
 
 ### Monitoring
 
@@ -212,33 +249,43 @@ Delete monitoring.
 The library provides specific exception types:
 
 - `EscavadorAPIInvalidDocumentException`: Invalid process number format
-- `EscavadorAPIProblemAPIException`: API-specific errors (authentication, insufficient credits, etc.)
-- `EscavadorAPIUnmappedErrorException`: Unexpected errors or network issues
+- `EscavadorAPIProblemAPIException`: API-specific errors (authentication,
+  insufficient credits, etc.)
+- `EscavadorAPIUnmappedErrorException`: Unexpected errors or network
+  issues
 
 ## Retry Logic
 
 All API calls include automatic retry logic:
+
 - **Maximum retries**: 5 attempts
 - **Retry delay**: 5 seconds between attempts
-- **Retry conditions**: Network errors (connection failures, timeouts, chunked encoding errors)
-- **Non-retryable errors**: Validation errors, HTTP errors (4xx/5xx), and API-specific exceptions
+- **Retry conditions**: Network errors (connection failures, timeouts,
+  chunked encoding errors)
+- **Non-retryable errors**: Validation errors, HTTP errors (4xx/5xx),
+  and API-specific exceptions
 
 ## Process Number Format
 
-Process numbers must follow the Brazilian CNJ (Conselho Nacional de Justiça) format:
+Process numbers must follow the Brazilian CNJ
+(Conselho Nacional de Justiça) format:
+
 - 20 digits total
 - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
 
-The library automatically validates process numbers and accepts them with or without punctuation.
+The library automatically validates process numbers and accepts them
+with or without punctuation.
 
 ## Authentication
 
 To use the Escavador API, you need:
+
 1. An Escavador account
 2. An API authentication token
 3. Sufficient credits for API calls
 
-For restricted documents, additional authentication may be required (username/password or digital certificate).
+For restricted documents, additional authentication may be required
+(username/password or digital certificate).
 
 ## Development
 
@@ -258,6 +305,7 @@ pytest
 ### Testing
 
 Tests require environment variables:
+
 - `ESCAVADOR_AUTH_TOKEN`: Your API token
 - `TEST_PROCESS_NUMBER`: A valid CNJ process number for testing
 
@@ -282,6 +330,7 @@ BSD 3-Clause License - see [LICENSE](LICENSE) file for details.
 ## Support
 
 For issues and questions:
+
 - Check the [Escavador API documentation](https://api.escavador.com/)
 - Open an issue on GitHub
 - Contact Murabei Data Science at a.baceti@murabei.com
