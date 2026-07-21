@@ -172,8 +172,46 @@ class EscavadorAPI:
                 payload={"error": str(e)})
 
     @_retry_on_network_errors
+    def get_courts(self):
+        """List all available courts for searches in Escavador.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with current
+                credit balance and monthly limit.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        url = self.BASE_URL + "v2/tribunais"
+
+        try:
+            response = self.session.get(
+                url=url, timeout=60)
+            response.raise_for_status()
+
+            return response.json()
+
+        except requests.HTTPError as e:
+            msg = response.json().get("message")
+            raise EscavadorAPIProblemAPIException(
+                message=msg,
+                payload={"error": str(e)})
+
+        except Exception as e:
+            msg = "Unmapped error"
+            raise EscavadorAPIUnmappedErrorException(
+                message=msg,
+                payload={"error": str(e)})
+
+    @_retry_on_network_errors
     def get_process_info(self, process_number: str):
         """Retrieve process information from Escavador using CNJ number.
+
+        This is a paid request.
 
         Args:
             process_number (str):
@@ -222,6 +260,8 @@ class EscavadorAPI:
     def get_process_updates(self, process_number: str):
         """Retrieve process updates from Escavador using CNJ number.
 
+        This is a paid request.
+
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
@@ -265,6 +305,8 @@ class EscavadorAPI:
     def get_process_public_documents(self, process_number: str):
         """Retrieve available public documents associated with a CNJ number.
 
+        This is a paid request.
+
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
@@ -305,6 +347,8 @@ class EscavadorAPI:
     @_retry_on_network_errors
     def get_process_all_documents(self, process_number: str):
         """Retrieve all available documents associated with a CNJ number.
+
+        This is a paid request.
 
         This method includes public and restricted documents (when available
         to the authenticated user).
@@ -351,6 +395,8 @@ class EscavadorAPI:
     @_retry_on_network_errors
     def request_process_update_public(self, process_number: str):
         """Request update to public process information using CNJ number.
+
+        This is a paid request.
 
         This method requests Escavador to search for new information on the
         process and update it, along with public documents found.
@@ -413,6 +459,8 @@ class EscavadorAPI:
         certificate_id: int | None = None,
         use_certificate: bool = False):
         """Request update to complete process information using CNJ number.
+
+        This is a paid request.
 
         This method requests Escavador to search for new information on the
         process and update it, along with any public or restricted documents
@@ -508,6 +556,8 @@ class EscavadorAPI:
     def get_process_update_status(self, process_number: str):
         """Retrieve search request status.
 
+        This is a paid request.
+
         Args:
             process_number (str):
                 Process number following CNJ format (20 digits). Punctuation
@@ -554,6 +604,8 @@ class EscavadorAPI:
     @_retry_on_network_errors
     def download_process_file(self, process_number: str, file_key: str):
         """Download PDF file of process documents.
+
+        This is a paid request.
 
         Args:
             process_number (str):
@@ -626,6 +678,8 @@ class EscavadorAPI:
     @_retry_on_network_errors
     def request_ai_summary(self, process_number: str):
         """Request a summary of available process information using CNJ number.
+
+        This is a paid request.
 
         Args:
             process_number (str):
@@ -718,6 +772,8 @@ class EscavadorAPI:
     @_retry_on_network_errors
     def get_ai_summary(self, process_number: str):
         """Retrieve AI summary.
+
+        This is a paid request.
 
         Args:
             process_number (str):
