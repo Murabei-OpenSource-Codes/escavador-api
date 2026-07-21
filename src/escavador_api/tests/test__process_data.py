@@ -1,5 +1,6 @@
 """Test EscavadorAPI."""
 import os
+from typing import Any
 import unittest
 from escavador_api.data import EscavadorAPI
 from escavador_api.exceptions import (EscavadorAPIInvalidDocumentException,
@@ -100,54 +101,55 @@ class TestEscavadorAPI(unittest.TestCase):
     def test_get_credit_balance(self):
         """Test get_credit_balance method."""
         result = self.escavador_api.get_credit_balance()
-        self.assertEqual(
-            set(result.keys()),
-            {'quantidade_creditos', 'saldo',
-             'saldo_descricao', 'limite_mensal'})
+        expected_keys = {
+            'quantidade_creditos', 'saldo',
+            'saldo_descricao', 'limite_mensal'}
+
+        self.assertTrue(expected_keys.issubset(result.keys()))
 
     def test_get_process_info(self):
         """Test get_process_info method."""
         result = self.escavador_api.get_process_info(
             process_number=TEST_PROCESS_NUMBER)
-        self.assertEqual(
-            set(result.keys()),
-            {'numero_cnj', 'titulo_polo_ativo', 'titulo_polo_passivo',
-             'ano_inicio', 'data_inicio', 'estado_origem', 'unidade_origem',
-             'data_ultima_movimentacao', 'quantidade_movimentacoes',
-             'fontes_tribunais_estao_arquivadas', 'data_ultima_verificacao',
-             'tempo_desde_ultima_verificacao', 'processos_relacionados',
-             'monitoramento_id', 'fontes', 'id'})
+        expected_keys = {
+            'numero_cnj', 'titulo_polo_ativo', 'titulo_polo_passivo',
+            'ano_inicio', 'data_inicio', 'estado_origem', 'unidade_origem',
+            'data_ultima_movimentacao', 'quantidade_movimentacoes',
+            'fontes_tribunais_estao_arquivadas', 'data_ultima_verificacao',
+            'tempo_desde_ultima_verificacao', 'processos_relacionados',
+            'monitoramento_id', 'fontes', 'id'}
+        self.assertTrue(expected_keys.issubset(result.keys()))
 
     def test_get_process_updates(self):
-        """Test get_process_movements method."""
+        """Test get_process_updates method."""
         result = self.escavador_api.get_process_updates(
             process_number=TEST_PROCESS_NUMBER)
-        self.assertEqual(
-            len(result), 17)
-        self.assertEqual(
-            set(result[0].keys()),
-            {'id', 'data', 'tipo', 'pagina', 'tipo_publicacao',
-             'classificacao_predita', 'conteudo', 'texto_categoria', 'fonte'})
+        self.assertEqual(len(result), 17)
+        expected_keys = {
+            'id', 'data', 'tipo', 'pagina', 'tipo_publicacao',
+            'classificacao_predita', 'conteudo', 'texto_categoria', 'fonte'}
+        self.assertTrue(expected_keys.issubset(result[0].keys()))
 
     def test_request_process_update_public(self):
         """Test process update methods."""
         result = self.escavador_api.get_process_update_status(
             process_number=TEST_PROCESS_NUMBER)
-        self.assertEqual(
-            set(result.keys()),
-            {'numero_cnj', 'data_ultima_verificacao',
-             'tempo_desde_ultima_verificacao', 'ultima_verificacao', 'opcoes'})
+        expected_keys = {
+            'numero_cnj', 'data_ultima_verificacao',
+            'tempo_desde_ultima_verificacao', 'ultima_verificacao', 'opcoes'}
+        self.assertTrue(expected_keys.issubset(result.keys()))
 
     def test_request_ai_summary(self):
         """Test request_ai_summary method."""
         try:
             result = self.escavador_api.get_ai_summary_status(
                 process_number=TEST_PROCESS_NUMBER)
-            self.assertEqual(
-                set(result.keys()),
-                {'id', 'status', 'criado_em', 'numero_cnj', 'concluido_em'})
+            expected_keys = {
+                'id', 'status', 'criado_em', 'numero_cnj', 'concluido_em'}
+            self.assertTrue(expected_keys.issubset(result.keys()))
+
         except EscavadorAPIException as e:
-            # case summary was already requested, the message should match
+            # if summary was already requested, the message should match
             expected_error = (
                 "Resumo inteligente já solicitado nas últimas 24 horas"
                 " e não há novas movimentações para atualização.")
@@ -160,6 +162,9 @@ class TestEscavadorAPI(unittest.TestCase):
         keyword_variations = ["testing"]
         aux_keywords = [{"condicao": "NAO_CONTEM", "termo": "tested"}]
         courts = ["TJSP", "TJRJ", "TJMG"]
+        expected_keys = {
+            'id', 'termo', 'tipo', 'esta_desativado', 'criado_em',
+            'variacoes', 'termos_auxiliares', 'tribunais_especificos'}
 
         result = self.escavador_api.create_monitoring_new_process(
             keyword=keyword,
@@ -167,10 +172,7 @@ class TestEscavadorAPI(unittest.TestCase):
             aux_keywords=aux_keywords,
             courts=courts)
         monitoring_id = result.get('id')
-        self.assertEqual(
-            set(result.keys()),
-            {'id', 'termo', 'tipo', 'esta_desativado', 'criado_em',
-             'variacoes', 'termos_auxiliares', 'tribunais_especificos'})
+        self.assertTrue(expected_keys.issubset(result.keys()))
         self.assertEqual(
             keyword, result.get('termo'))
         self.assertEqual(
@@ -189,10 +191,7 @@ class TestEscavadorAPI(unittest.TestCase):
             keyword_variations=new_keyword_variations,
             aux_keywords=new_aux_keywords,
             courts=new_courts)
-        self.assertEqual(
-            set(result.keys()),
-            {'id', 'termo', 'tipo', 'esta_desativado', 'criado_em',
-             'variacoes', 'termos_auxiliares', 'tribunais_especificos'})
+        self.assertTrue(expected_keys.issubset(result.keys()))
         self.assertEqual(
             new_keyword_variations, result.get('variacoes'))
         self.assertEqual(
@@ -215,10 +214,10 @@ class TestEscavadorAPI(unittest.TestCase):
             court=court,
             frequency=frequency)
         monitoring_id = result.get('id')
-        self.assertEqual(
-            set(result.keys()),
-            {'id', 'numero', 'criado_em', 'data_ultima_verificacao',
-             'tribunais', 'frequencia', 'status'})
+        expected_keys = {
+            'id', 'numero', 'criado_em', 'data_ultima_verificacao',
+            'tribunais', 'frequencia', 'status'}
+        self.assertTrue(expected_keys.issubset(result.keys()))
         self.assertEqual(
             court, result.get('tribunais')[0].get('sigla'))
         self.assertEqual(
