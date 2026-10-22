@@ -36,6 +36,11 @@ class EscavadorAPIException(Exception): # NOQA
         return rv
 
 
+class EscavadorAPIInvalidParametersException(EscavadorAPIException):
+    """Error when invalid parameters are provided."""
+    pass
+
+
 class EscavadorAPIInvalidDocumentException(EscavadorAPIException):
     """Error when requested document is considered as invalid."""
     pass
@@ -48,4 +53,9 @@ class EscavadorAPIProblemAPIException(EscavadorAPIException):
 
 class EscavadorAPIUnmappedErrorException(EscavadorAPIException):
     """Error not mapped related to the API."""
+    pass
+
+
+class EscavadorAPIAuthenticationError(EscavadorAPIException):
+    """Error when authentication token is required."""
     pass

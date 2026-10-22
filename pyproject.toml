@@ -1,6 +1,6 @@
 [project]
 name = "escavador-api"
-version = "0.1.8"
+version = "0.1.10-b.0"
 description = "Python API to interact with Escavador endpoints"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "pumpwood_communication", from = "src"}]
+packages = [{include = "escavador_api", from = "src"}]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
