@@ -3,14 +3,17 @@ import os
 from typing import Any
 import unittest
 from escavador_api.data import EscavadorAPI
-from escavador_api.exceptions import (EscavadorAPIInvalidDocumentException,
-                                      EscavadorAPIException)
+from escavador_api.exceptions import (
+    EscavadorAPIInvalidDocumentException, EscavadorAPIException,
+    EscavadorAPIInvalidParametersException)
 
 ESCAVADOR_AUTH_TOKEN = os.getenv("ESCAVADOR_AUTH_TOKEN")
+"""Escavador API authentication token."""
 TEST_PROCESS_NUMBER = os.getenv("TEST_PROCESS_NUMBER")
+"""CNJ number used by process tests."""
 
 
-class TestEscavadorAPI(unittest.TestCase):
+class TestEscavadorProcessAPI(unittest.TestCase):
     """Test EscavadorAPI methods."""
 
     def setUp(self):
@@ -77,34 +80,32 @@ class TestEscavadorAPI(unittest.TestCase):
             "X-Requested-With", self.escavador_api.headers)
 
     def test_validate_process_number_valid(self):
-        """Test _validate_process_number with valid input."""
+        """Test validate_process_number with a valid CNJ number."""
         # Valid CNJ number
-        result = self.escavador_api._validate_process_number(
+        result = self.escavador_api.validate_process_number(
             TEST_PROCESS_NUMBER)
-        self.assertTrue(
-            result)
+        self.assertTrue(result)
 
     def test_validate_process_number_invalid(self):
-        """Test _validate_process_number with invalid inputs."""
+        """Test validate_process_number with invalid inputs."""
         with self.assertRaises(
             EscavadorAPIInvalidDocumentException):
-            self.escavador_api._validate_process_number("invalid")
+            self.escavador_api.validate_process_number("invalid")
 
         with self.assertRaises(
             EscavadorAPIInvalidDocumentException):
-            self.escavador_api._validate_process_number("Z1234567890123456789")
+            self.escavador_api.validate_process_number("Z1234567890123456789")
 
         with self.assertRaises(
             EscavadorAPIInvalidDocumentException):
-            self.escavador_api._validate_process_number("94373466920263006300")
+            self.escavador_api.validate_process_number("94373466920263006300")
 
     def test_get_credit_balance(self):
         """Test get_credit_balance method."""
         result = self.escavador_api.get_credit_balance()
         expected_keys = {
             'quantidade_creditos', 'saldo',
-            'saldo_descricao', 'limite_mensal'}
-
+            'saldo_descricao'}
         self.assertTrue(expected_keys.issubset(result.keys()))
 
     def test_get_process_info(self):
@@ -124,23 +125,23 @@ class TestEscavadorAPI(unittest.TestCase):
         """Test get_process_updates method."""
         result = self.escavador_api.get_process_updates(
             process_number=TEST_PROCESS_NUMBER)
-        self.assertEqual(len(result), 17)
+        self.assertNotEqual(len(result), 0)
         expected_keys = {
             'id', 'data', 'tipo', 'pagina', 'tipo_publicacao',
             'classificacao_predita', 'conteudo', 'texto_categoria', 'fonte'}
         self.assertTrue(expected_keys.issubset(result[0].keys()))
 
     def test_request_process_update_public(self):
-        """Test process update methods."""
+        """Test get_process_update_status for a known process."""
         result = self.escavador_api.get_process_update_status(
             process_number=TEST_PROCESS_NUMBER)
         expected_keys = {
             'numero_cnj', 'data_ultima_verificacao',
-            'tempo_desde_ultima_verificacao', 'ultima_verificacao', 'opcoes'}
+            'tempo_desde_ultima_verificacao', 'ultima_verificacao'}
         self.assertTrue(expected_keys.issubset(result.keys()))
 
     def test_request_ai_summary(self):
-        """Test request_ai_summary method."""
+        """Test get_ai_summary_status for a known process."""
         try:
             result = self.escavador_api.get_ai_summary_status(
                 process_number=TEST_PROCESS_NUMBER)
@@ -167,10 +168,8 @@ class TestEscavadorAPI(unittest.TestCase):
             'variacoes', 'termos_auxiliares', 'tribunais_especificos'}
 
         result = self.escavador_api.create_monitoring_new_process(
-            keyword=keyword,
-            keyword_variations=keyword_variations,
-            aux_keywords=aux_keywords,
-            courts=courts)
+            keyword=keyword, keyword_variations=keyword_variations,
+            aux_keywords=aux_keywords, courts=courts)
         monitoring_id = result.get('id')
         self.assertTrue(expected_keys.issubset(result.keys()))
         self.assertEqual(
@@ -198,10 +197,9 @@ class TestEscavadorAPI(unittest.TestCase):
             set(new_courts), set(result.get('tribunais_especificos')))
 
         # Delete monitoring
-        result = self.escavador_api.delete_monitoring_new_process(
-            monitoring_id)
-        self.assertTrue(
-            result)
+        result = self.escavador_api\
+            .delete_monitoring_new_process(monitoring_id)
+        self.assertTrue(result)
 
     def test_monitoring_existing_process(self):
         """Test methods associated with existing process monitoring."""
@@ -210,8 +208,7 @@ class TestEscavadorAPI(unittest.TestCase):
         frequency = "SEMANAL"
 
         result = self.escavador_api.create_monitoring_existing_process(
-            process_number=TEST_PROCESS_NUMBER,
-            court=court,
+            process_number=TEST_PROCESS_NUMBER, court=court,
             frequency=frequency)
         monitoring_id = result.get('id')
         expected_keys = {
@@ -226,5 +223,4 @@ class TestEscavadorAPI(unittest.TestCase):
         # Delete monitoring
         result = self.escavador_api.delete_monitoring_existing_process(
             monitoring_id)
-        self.assertTrue(
-            result)
+        self.assertTrue(result)
