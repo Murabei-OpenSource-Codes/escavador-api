@@ -5,17 +5,27 @@ class EscavadorAPIException(Exception): # NOQA
     """Custom Escavador API Exception."""
 
     def __repr__(self):
-        """__repr__."""
+        """Return the debug representation of the exception.
+
+        Returns:
+            str:
+                Message and error payload.
+        """
         template = "{message}\nerror_payload={payload}"
         return template.format(message=self.message, payload=self.payload)
 
     def __str__(self):
-        """__str__."""
+        """Return the string representation of the exception.
+
+        Returns:
+            str:
+                Message and error payload.
+        """
         template = "{message}\nerror payload={payload}"
         return template.format(message=self.message, payload=self.payload)
 
     def __init__(self, message: str, payload: dict = {}):
-        """__init__.
+        """Store the error message and payload.
 
         Args:
             message (str):
@@ -28,7 +38,12 @@ class EscavadorAPIException(Exception): # NOQA
         self.payload = payload
 
     def to_dict(self):
-        """to_dict."""
+        """Serialize the exception to a dictionary.
+
+        Returns:
+            dict:
+                Payload, exception type name, and message.
+        """
         rv = {
             "payload": self.payload,
             "type": self.__class__.__name__,

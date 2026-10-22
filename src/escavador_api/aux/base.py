@@ -24,11 +24,15 @@ class BaseMixin:
     """Base URL for the Escavador API."""
 
     def __init__(self, escavador_auth_token: str):
-        """__init__.
+        """Open an authenticated session for Escavador requests.
 
         Args:
             escavador_auth_token (str):
                 Authentication token for Escavador API.
+
+        Raises:
+            EscavadorAPIAuthenticationError:
+                If escavador_auth_token is empty.
         """
         if not escavador_auth_token:
             msg = "Authentication token is required"
@@ -63,6 +67,12 @@ class BaseMixin:
         Returns:
             dict:
                 Data returned by the API.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -127,19 +137,27 @@ class BaseMixin:
     @retry_on_network_errors
     def post(self, url: str, params: dict | None = None,
              data: Any | None = None, json: Any | None = None) -> Any:
-        """Aux fuction to allow retry on get requests.
+        """Send a POST request, retrying network failures.
 
         Args:
             url (str):
-                URL to get data from.
+                URL path or absolute URL to call.
             params (dict, optional):
-                Query parameters for the request
+                Query parameters for the request.
             data (Any, optional):
-                Data to be sent in the request.
+                Form body to be sent in the request.
+            json (Any, optional):
+                JSON body to be sent in the request.
 
         Returns:
             dict:
                 Data returned by the API.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -162,15 +180,22 @@ class BaseMixin:
                 payload={"error": str(e)})
 
     def delete(self, url: str) -> Any:
-        """Aux fuction to allow retry on delete requests.
+        """Send a DELETE request.
 
         Args:
             url (str):
                 URL to delete data from.
 
         Returns:
-            dict:
-                Data returned by the API.
+            bool | dict:
+                True when the API responds with status 204.
+                Parsed JSON otherwise.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -199,17 +224,24 @@ class BaseMixin:
                 payload={"error": str(e)})
 
     def patch(self, url: str, data: Any) -> Any:
-        """Aux fuction to allow retry on delete requests.
+        """Send a PATCH request.
 
         Args:
             url (str):
-                URL to delete data from.
+                URL path or absolute URL to update.
             data (Any):
-                Data to be sent in the request.
+                JSON body to be sent in the request.
 
         Returns:
-            dict:
-                Data returned by the API.
+            bool | dict:
+                True when the API responds with status 204.
+                Parsed JSON otherwise.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -249,6 +281,12 @@ class BaseMixin:
         Yields:
             dict:
                 Individual items returned by the API.
+
+        Raises:
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
         """
         while url is not None:
             data = self.get(url=url, params=params)

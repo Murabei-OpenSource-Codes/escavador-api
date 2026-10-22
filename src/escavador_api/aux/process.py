@@ -29,7 +29,7 @@ class ProcessMixin(BaseMixin):
         initial sequence.
 
         Args:
-            process_number (str):
+            process_number (str | int):
                 process number to be validated.
 
         Returns:
@@ -79,8 +79,8 @@ class ProcessMixin(BaseMixin):
 
         Returns:
             dict:
-                JSON response returned by the Escavador API with current
-                credit balance and monthly limit.
+                JSON response returned by the Escavador API listing
+                the courts available for search.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -107,6 +107,8 @@ class ProcessMixin(BaseMixin):
                 information about the process.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -129,11 +131,13 @@ class ProcessMixin(BaseMixin):
                 is optional.
 
         Returns:
-            list:
-                List of dictionaries representing updates associated with
-                the process.
+            Generator:
+                Dictionaries representing updates associated with
+                the process. One item is yielded per API result.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -156,11 +160,13 @@ class ProcessMixin(BaseMixin):
                 is optional.
 
         Returns:
-            list:
-                List of dictionaries representing public documents
-                associated with the process.
+            Generator:
+                Dictionaries representing public documents associated
+                with the process. One item is yielded per API result.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -185,11 +191,13 @@ class ProcessMixin(BaseMixin):
                 is optional.
 
         Returns:
-            list:
-                List of dictionaries representing all documents
-                associated with the process.
+            Generator:
+                Dictionaries representing documents associated with
+                the process. One item is yielded per API result.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -220,6 +228,8 @@ class ProcessMixin(BaseMixin):
                 the search request status.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -271,8 +281,11 @@ class ProcessMixin(BaseMixin):
                 the search request status.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If authentication arguments are inconsistent or the
+                Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -329,6 +342,8 @@ class ProcessMixin(BaseMixin):
                 the search request status.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -359,8 +374,11 @@ class ProcessMixin(BaseMixin):
                 Escavador API.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If the Escavador API returns an HTTP error or the
+                response body is not a PDF.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -412,6 +430,8 @@ class ProcessMixin(BaseMixin):
                 the search request details and status.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -439,6 +459,8 @@ class ProcessMixin(BaseMixin):
                 the search request status.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -467,6 +489,8 @@ class ProcessMixin(BaseMixin):
                 generated AI summary, update date and summary metadata.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -513,7 +537,9 @@ class ProcessMixin(BaseMixin):
 
         Raises:
             EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If keyword_variations has more than two items, if
+                aux_keywords is invalid, or if the Escavador API
+                returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -555,9 +581,9 @@ class ProcessMixin(BaseMixin):
         """Retrieve a list of new process monitorings created.
 
         Returns:
-            list:
-                List of dictionaries representing active monitorings
-                for new processes.
+            Generator:
+                Dictionaries representing active monitorings for new
+                processes. One item is yielded per API result.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -619,9 +645,9 @@ class ProcessMixin(BaseMixin):
                 New process monitoring ID.
 
         Returns:
-            list:
-                List of dictionaries representing new processes
-                found by the monitoring.
+            Generator:
+                Dictionaries representing new processes found by the
+                monitoring. One item is yielded per API result.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -668,7 +694,9 @@ class ProcessMixin(BaseMixin):
 
         Raises:
             EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If keyword_variations has more than two items, if
+                aux_keywords is invalid, or if the Escavador API
+                returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
@@ -729,6 +757,8 @@ class ProcessMixin(BaseMixin):
                 of the newly created monitoring.
 
         Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
             EscavadorAPIProblemAPIException:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
@@ -750,9 +780,9 @@ class ProcessMixin(BaseMixin):
         """Retrieve a list of existing process monitorings created.
 
         Returns:
-            list:
-                List of dictionaries representing active monitorings
-                for existing processes.
+            Generator:
+                Dictionaries representing active monitorings for
+                existing processes. One item is yielded per API result.
 
         Raises:
             EscavadorAPIProblemAPIException:

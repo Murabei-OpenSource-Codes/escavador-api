@@ -8,7 +8,9 @@ from escavador_api.exceptions import (
     EscavadorAPIInvalidParametersException)
 
 ESCAVADOR_AUTH_TOKEN = os.getenv("ESCAVADOR_AUTH_TOKEN")
+"""Escavador API authentication token."""
 TEST_PROCESS_NUMBER = os.getenv("TEST_PROCESS_NUMBER")
+"""CNJ number used by process tests."""
 
 
 class TestEscavadorProcessAPI(unittest.TestCase):
@@ -78,14 +80,14 @@ class TestEscavadorProcessAPI(unittest.TestCase):
             "X-Requested-With", self.escavador_api.headers)
 
     def test_validate_process_number_valid(self):
-        """Test _validate_process_number with valid input."""
+        """Test validate_process_number with a valid CNJ number."""
         # Valid CNJ number
         result = self.escavador_api.validate_process_number(
             TEST_PROCESS_NUMBER)
         self.assertTrue(result)
 
     def test_validate_process_number_invalid(self):
-        """Test _validate_process_number with invalid inputs."""
+        """Test validate_process_number with invalid inputs."""
         with self.assertRaises(
             EscavadorAPIInvalidDocumentException):
             self.escavador_api.validate_process_number("invalid")
@@ -130,7 +132,7 @@ class TestEscavadorProcessAPI(unittest.TestCase):
         self.assertTrue(expected_keys.issubset(result[0].keys()))
 
     def test_request_process_update_public(self):
-        """Test process update methods."""
+        """Test get_process_update_status for a known process."""
         result = self.escavador_api.get_process_update_status(
             process_number=TEST_PROCESS_NUMBER)
         expected_keys = {
@@ -139,7 +141,7 @@ class TestEscavadorProcessAPI(unittest.TestCase):
         self.assertTrue(expected_keys.issubset(result.keys()))
 
     def test_request_ai_summary(self):
-        """Test request_ai_summary method."""
+        """Test get_ai_summary_status for a known process."""
         try:
             result = self.escavador_api.get_ai_summary_status(
                 process_number=TEST_PROCESS_NUMBER)

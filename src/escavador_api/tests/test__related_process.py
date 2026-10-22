@@ -8,7 +8,7 @@ from escavador_api.data import EscavadorAPI
 ESCAVADOR_AUTH_TOKEN = os.getenv("ESCAVADOR_AUTH_TOKEN")
 """Escavador API authentication token."""
 TEST_CPF_NUMBER = os.getenv("TEST_CPF_NUMBER")
-"""Test process number."""
+"""CPF used by related-process tests."""
 
 
 escavador_api = EscavadorAPI(ESCAVADOR_AUTH_TOKEN)

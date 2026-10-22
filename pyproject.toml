@@ -1,6 +1,6 @@
 [project]
 name = "escavador-api"
-version = "0.1.10-b.0"
+version = "0.1.11-b.0"
 description = "Python API to interact with Escavador endpoints"
 readme = "README.md"
 requires-python = ">=3.12"

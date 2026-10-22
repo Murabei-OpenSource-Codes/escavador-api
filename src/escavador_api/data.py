@@ -12,5 +12,9 @@ class EscavadorAPI(GeneralMixin, ProcessMixin, RelatedProcessMixin):
         Args:
             escavador_auth_token (str):
                 Authentication token for Escavador API.
+
+        Raises:
+            EscavadorAPIAuthenticationError:
+                If escavador_auth_token is empty.
         """
         super().__init__(escavador_auth_token=escavador_auth_token)
