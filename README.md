@@ -15,10 +15,10 @@ pagination, retries, and typed exceptions so Murabei (and other) services
 do not reimplement the same client logic.
 
 ### How it is used
-Import `EscavadorAPI`, pass an Escavador auth token, and call methods for
-process lookup, documents, updates, monitoring, and credits. Typical
-consumers are ETL workers and internal tools that need structured process
-data.
+Import `EscavadorAPI` from `escavador_api.data`, pass an Escavador auth
+token, and call methods for process lookup, documents, updates,
+monitoring, related parties, and credits. Typical consumers are ETL
+workers and internal tools that need structured process data.
 
 ### Scope
 In scope: Escavador REST client behavior (requests, retries, error
@@ -35,10 +35,12 @@ and downstream storage or ETL orchestration.
 - **AI Summaries**: Generate and retrieve AI-powered process summaries
 - **Process Monitoring**: Set up monitoring for new processes or updates
   to existing processes
+- **Related Processes**: List processes linked to a person or a company
+  by CPF, CNPJ, or name
 - **Credit Management**: Check API usage credits and limits
 - **Court Data Refresh**: Request fresh data updates from court sources
-- **Retry Logic**: Automatic retry with 5-second delays for network
-  failures (max 5 retries)
+- **Retry Logic**: GET and POST retry connection errors and timeouts
+  (5 attempts, 3 seconds apart)
 
 ## Installation
 
@@ -54,11 +56,24 @@ pip install .
 
 - Python >= 3.12
 - requests >= 2.32.5
+- tenacity >= 9.1.4
+
+## Configuration
+
+Read when the client is constructed:
+
+- `ESCAVADOR_API__REQUEST_TIMEOUT`: request timeout in seconds.
+  Defaults to 60.
+- `ESCAVADOR_API__PROXY_URL`: proxy URL for HTTP and HTTPS. If unset,
+  no proxy is used.
+
+The auth token is an argument of `EscavadorAPI`. The library does not
+read it from the environment.
 
 ## Quick Start
 
 ```python
-from escavador_api import EscavadorAPI
+from escavador_api.data import EscavadorAPI
 
 # Initialize with your API token
 api = EscavadorAPI("your_auth_token_here")
@@ -67,8 +82,8 @@ api = EscavadorAPI("your_auth_token_here")
 balance = api.get_credit_balance()
 print(balance)
 
-# Get process information
-process_info = api.get_process_info("12345678901234567890")
+# Get process information. The number must be a valid CNJ.
+process_info = api.get_process_info("00000016620260000001")
 print(process_info)
 ```
 
@@ -113,19 +128,20 @@ Retrieve basic process information. **(paid)**
   optional)
 
 ```python
-get_process_updates(process_number: str) -> list
+get_process_updates(process_number: str)
 ```
-Get all updates for a process. **(paid)**
+Yields one dictionary per process update. **(paid)**
 
 ```python
-get_process_public_documents(process_number: str) -> list
+get_process_public_documents(process_number: str)
 ```
-Get publicly available documents. **(paid)**
+Yields one dictionary per public document. **(paid)**
 
 ```python
-get_process_all_documents(process_number: str) -> list
+get_process_all_documents(process_number: str)
 ```
-Get all documents (public and restricted, if authorized). **(paid)**
+Yields one dictionary per document, including restricted documents
+when the caller is authorized. **(paid)**
 
 #### Process Updates
 
@@ -137,10 +153,10 @@ Request update of public process information. **(paid)**
 ```python
 request_process_update_full(
     process_number: str,
-    auth_username: str = None,
-    auth_password: str = None,
-    certificate_id: int = None,
-    use_certificate: bool = False
+    auth_username: str | None = None,
+    auth_password: str | None = None,
+    certificate_id: int | None = None,
+    use_certificate: bool = False,
 ) -> dict
 ```
 Request full update including restricted documents. **(paid)**
@@ -174,6 +190,36 @@ get_ai_summary(process_number: str) -> dict
 ```
 Retrieve the generated AI summary. **(paid)**
 
+### Related processes
+
+```python
+get_related_processes(
+    cpf_cnpj: str | None = None,
+    nome: str | None = None,
+    ordena_por: str = "data_inicio",
+    ordem: str = "desc",
+    limit: Literal[20, 50, 100] = 100,
+    tribunais: list[str] | None = None,
+    incluir_homonimos: bool | None = None,
+    incluir_mesma_raiz_cnpj: bool | None = None,
+    polo: Literal["ATIVO", "PASSIVO", "ADVOGADO", "OUTROS"] | None = None,
+    status: Literal["ATIVO", "INATIVO"] | None = None,
+    data_minima: str | None = None,
+    data_maxima: str | None = None,
+    assuntos_codigos_cnj: list[int] | None = None,
+    classes_codigos_cnj: list[int] | None = None,
+    materias_codigos_cnj: list[int] | None = None,
+    valor_causa_minimo: float | None = None,
+    valor_causa_maximo: float | None = None,
+    envolvidos_relacionados: list[str] | None = None,
+) -> list[dict]
+```
+
+List processes for a person or a company. `cpf_cnpj` or `nome` is
+required. Other arguments are optional filters. Raises
+`EscavadorAPIInvalidParametersException` when both identifiers are
+missing.
+
 ### Monitoring
 
 #### New Process Monitoring
@@ -181,17 +227,17 @@ Retrieve the generated AI summary. **(paid)**
 ```python
 create_monitoring_new_process(
     keyword: str,
-    keyword_variations: list[str] = None,
-    aux_keywords: list[KeywordDict] = None,
-    courts: list[str] = None
+    keyword_variations: list[str] | None = None,
+    aux_keywords: list[KeywordDict] | None = None,
+    courts: list[str] | None = None,
 ) -> dict
 ```
 Create monitoring for new processes matching criteria.
 
 ```python
-list_monitoring_new_process() -> list
+list_monitoring_new_process()
 ```
-List all new process monitorings.
+Yields one dictionary per new-process monitoring.
 
 ```python
 get_monitoring_new_process(monitoring_id: int) -> dict
@@ -201,9 +247,9 @@ Get details of a specific monitoring.
 ```python
 edit_monitoring_new_process(
     monitoring_id: int,
-    keyword_variations: list[str] = None,
-    aux_keywords: list[KeywordDict] = None,
-    courts: list[str] = None
+    keyword_variations: list[str] | None = None,
+    aux_keywords: list[KeywordDict] | None = None,
+    courts: list[str] | None = None,
 ) -> dict
 ```
 Edit an existing monitoring.
@@ -214,25 +260,25 @@ delete_monitoring_new_process(monitoring_id: int) -> bool
 Delete a monitoring.
 
 ```python
-get_results_monitoring_new_process(monitoring_id: int) -> list
+get_results_monitoring_new_process(monitoring_id: int)
 ```
-Get results from a monitoring.
+Yields one dictionary per process found by the monitoring.
 
 #### Existing Process Monitoring
 
 ```python
 create_monitoring_existing_process(
     process_number: str,
-    court: str = None,
-    frequency: str = None
+    court: str | None = None,
+    frequency: str | None = None,
 ) -> dict
 ```
 Monitor updates to an existing process.
 
 ```python
-list_monitoring_existing_process() -> list
+list_monitoring_existing_process()
 ```
-List existing process monitorings.
+Yields one dictionary per existing-process monitoring.
 
 ```python
 get_monitoring_existing_process(monitoring_id: int) -> dict
@@ -248,22 +294,26 @@ Delete monitoring.
 
 The library provides specific exception types:
 
-- `EscavadorAPIInvalidDocumentException`: Invalid process number format
-- `EscavadorAPIProblemAPIException`: API-specific errors (authentication,
-  insufficient credits, etc.)
-- `EscavadorAPIUnmappedErrorException`: Unexpected errors or network
-  issues
+- `EscavadorAPIException`: Base error. Carries `message` and `payload`.
+- `EscavadorAPIAuthenticationError`: The auth token is empty.
+- `EscavadorAPIInvalidDocumentException`: The process number is not a
+  valid CNJ number.
+- `EscavadorAPIInvalidParametersException`: A call is missing a required
+  argument, such as both `cpf_cnpj` and `nome`.
+- `EscavadorAPIProblemAPIException`: The Escavador API returned an HTTP
+  error, or a monitoring call failed local checks.
+- `EscavadorAPIUnmappedErrorException`: An unexpected error during a
+  request.
 
 ## Retry Logic
 
-All API calls include automatic retry logic:
+`get`, `get_binary`, and `post` retry network failures. `delete` and
+`patch` do not.
 
-- **Maximum retries**: 5 attempts
-- **Retry delay**: 5 seconds between attempts
-- **Retry conditions**: Network errors (connection failures, timeouts,
-  chunked encoding errors)
-- **Non-retryable errors**: Validation errors, HTTP errors (4xx/5xx),
-  and API-specific exceptions
+- **Attempts**: 5 (`stop_after_attempt`)
+- **Delay**: 3 seconds between attempts
+- **Retried errors**: `requests.ConnectionError` and `requests.Timeout`
+- **Not retried**: Validation errors and HTTP error responses
 
 ## Process Number Format
 
@@ -296,7 +346,7 @@ For restricted documents, additional authentication may be required
 pip install -e .
 
 # Run tests
-pytest
+python -m unittest discover -s src/escavador_api/tests
 
 # Build package
 ./build.sh
@@ -304,15 +354,17 @@ pytest
 
 ### Testing
 
-Tests require environment variables:
+Tests use `unittest` and call the live Escavador API. Set:
 
-- `ESCAVADOR_AUTH_TOKEN`: Your API token
-- `TEST_PROCESS_NUMBER`: A valid CNJ process number for testing
+- `ESCAVADOR_AUTH_TOKEN`: API token passed into `EscavadorAPI`
+- `TEST_PROCESS_NUMBER`: A valid CNJ number for process tests
+- `TEST_CPF_NUMBER`: A CPF for related-process tests
 
 ```bash
 export ESCAVADOR_AUTH_TOKEN="your_token"
 export TEST_PROCESS_NUMBER="process_number"
-pytest
+export TEST_CPF_NUMBER="cpf"
+python -m unittest discover -s src/escavador_api/tests
 ```
 
 ## License

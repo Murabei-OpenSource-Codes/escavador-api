@@ -1,6 +1,6 @@
 """Escavador API."""
 from escavador_api.aux import (
-    BaseMixin, GeneralMixin, ProcessMixin, RelatedProcessMixin)
+    GeneralMixin, ProcessMixin, RelatedProcessMixin)
 
 
 class EscavadorAPI(GeneralMixin, ProcessMixin, RelatedProcessMixin):
