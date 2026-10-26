@@ -41,6 +41,8 @@ and downstream storage or ETL orchestration.
 - **Court Data Refresh**: Request fresh data updates from court sources
 - **Retry Logic**: GET and POST retry connection errors and timeouts
   (5 attempts, 3 seconds apart)
+- **Pagination cap**: Paginated calls fetch the first page, then at
+  most `ESCAVADOR_API__MAX_PAGES` further pages (default 200)
 
 ## Installation
 
@@ -57,15 +59,32 @@ pip install .
 - Python >= 3.12
 - requests >= 2.32.5
 - tenacity >= 9.1.4
+- loguru (pagination warnings in `BaseMixin.fetch_paginated`)
 
 ## Configuration
 
-Read when the client is constructed:
+Read when `escavador_api.config` is imported (the first import of
+`EscavadorAPI`). Later environment changes apply only after the
+process restarts.
 
 - `ESCAVADOR_API__REQUEST_TIMEOUT`: request timeout in seconds.
   Defaults to 60.
 - `ESCAVADOR_API__PROXY_URL`: proxy URL for HTTP and HTTPS. If unset,
   no proxy is used.
+- `ESCAVADOR_API__MAX_PAGES`: extra pages after the first response
+  on paginated calls. Defaults to 200. The first page is always
+  requested. Hitting the cap logs a warning and keeps items already
+  fetched.
+
+`ESCAVADOR_API__REQUEST_TIMEOUT` and `ESCAVADOR_API__MAX_PAGES` must
+be positive integers. A missing or blank value keeps the default.
+Any other value raises `ValueError` at import.
+
+Paginated calls are `get_process_updates`,
+`get_process_public_documents`, `get_process_all_documents`,
+`get_related_processes`, `list_monitoring_new_process`,
+`get_results_monitoring_new_process`, and
+`list_monitoring_existing_process`.
 
 The auth token is an argument of `EscavadorAPI`. The library does not
 read it from the environment.
