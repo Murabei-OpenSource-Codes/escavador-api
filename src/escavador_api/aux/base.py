@@ -11,7 +11,7 @@ from tenacity import (
 from typing import Literal, TypedDict, Any
 
 # Local imports
-from escavador_api.config import REQUEST_TIMEOUT, PROXY_URL
+from escavador_api.config import MAX_PAGES, PROXY_URL, REQUEST_TIMEOUT
 
 
 class BaseMixin:
@@ -272,6 +272,10 @@ class BaseMixin:
     def fetch_paginated(self, url: str, params: dict | None = None):
         """Fetch data from the API.
 
+        The first page is always requested. Further pages stop at
+        ``MAX_PAGES`` (``ESCAVADOR_API__MAX_PAGES``). Reaching the cap
+        logs a warning and returns the items already fetched.
+
         Args:
             url (str):
                 Initial request URL.
@@ -288,6 +292,7 @@ class BaseMixin:
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
+        pages_fetched = 0
         while url is not None:
             data = self.get(url=url, params=params)
             for item in data.get("items", []):
@@ -296,8 +301,21 @@ class BaseMixin:
             # The paginantion of the query does not need the parameters
             # they are send at the first request
             params = None
-            url = data.get("links", {}).get("next")
-            if url is not None:
-                logger.debug(
-                    "- Paginating results url[{url}]",
-                    url=url)
+            next_url = data.get("links", {}).get("next")
+            if next_url is None:
+                break
+            if MAX_PAGES <= pages_fetched:
+                reason = "Page cap of {max_pages} was reached.".format(
+                    max_pages=MAX_PAGES)
+                logger.warning(
+                    "Pagination stopped. reason={reason} "
+                    "next_url={next_url} pages_fetched={pages_fetched}",
+                    reason=reason, next_url=next_url,
+                    pages_fetched=pages_fetched)
+                break
+
+            pages_fetched = pages_fetched + 1
+            logger.debug(
+                "- Paginating results url[{url}]",
+                url=next_url)
+            url = next_url
