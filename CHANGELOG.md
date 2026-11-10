@@ -6,6 +6,35 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.13] - 2026-11-10
+
+### Added
+- HTTP client mixins under `escavador_api.fetch` (`FetchBaseMixin`,
+  `FetchGeneralMixin`, `FetchProcessMixin`, `FetchRelatedProcessMixin`)
+- `escavador_api.transform.TransformProcessData` — normalize Escavador
+  process payloads into `process`, `process_by_court`, and `involved`
+  DataFrames (`process_list`, `process`)
+- `TransformCourtData` — tribunal acronym normalization and UF mapping
+- `TransformDeduplicateProcessByCourt` — one row per CNJ with highest
+  `court_grade` and `first_court_*` fields from grade 1
+- `TransformProcessInvolvedData`, `TransformPartyRole`,
+  `TransformFirstCourtPolarity` — involved parties, role mapping, and
+  first-instance polarity
+- `escavador_api.utils.process` — `validate_process_number` and
+  `format_process_number`
+- Package export `EscavadorAPI` from `escavador_api`
+- `test__transform` live API test scaffold
+
+### Changed
+- `EscavadorAPI` uses `fetch` mixins; `escavador_api.aux` removed
+- `get`, `get_binary`, and `post` re-raise `ConnectionError` and
+  `Timeout` so tenacity retries apply
+- README documents transforms, CNJ length check, and runtime deps for
+  the transform path
+
+### Removed
+- `escavador_api.aux` mixin package (replaced by `escavador_api.fetch`)
+
 ## [0.1.12] - 2026-10-26
 
 ### Added
