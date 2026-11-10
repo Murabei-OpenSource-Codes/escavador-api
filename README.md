@@ -22,8 +22,9 @@ workers and internal tools that need structured process data.
 
 ### Scope
 In scope: Escavador REST client behavior (requests, retries, error
-mapping). Out of scope: Escavador account management, credit purchase,
-and downstream storage or ETL orchestration.
+mapping) and optional pandas transforms for process and involved data.
+Out of scope: Escavador account management, credit purchase, and
+downstream storage or ETL orchestration beyond this library.
 
 ## Features
 
@@ -43,6 +44,9 @@ and downstream storage or ETL orchestration.
   (5 attempts, 3 seconds apart)
 - **Pagination cap**: Paginated calls fetch the first page, then at
   most `ESCAVADOR_API__MAX_PAGES` further pages (default 200)
+- **Process transforms**: `TransformProcessData` turns API process
+  JSON into `process`, `process_by_court`, and `involved` DataFrames
+  (court UF, role normalization, per-CNJ deduplication)
 
 ## Installation
 
@@ -59,7 +63,14 @@ pip install .
 - Python >= 3.12
 - requests >= 2.32.5
 - tenacity >= 9.1.4
-- loguru (pagination warnings in `BaseMixin.fetch_paginated`)
+
+Declared in `pyproject.toml`. The client also imports **loguru** for
+pagination warnings in `FetchBaseMixin.fetch_paginated`.
+
+Using **`escavador_api.transform`** additionally needs **pandas** and
+**python-slugify** (role mapping). Those are not listed in
+`pyproject.toml` yet; install them in ETL environments that call
+`TransformProcessData`.
 
 ## Configuration
 
@@ -106,6 +117,23 @@ print(balance)
 process_info = api.get_process_info("00000016620260000001")
 print(process_info)
 ```
+
+### Process transforms (ETL)
+
+```python
+from escavador_api.data import EscavadorAPI
+from escavador_api.transform import TransformProcessData
+
+api = EscavadorAPI("your_auth_token_here")
+raw = api.get_related_processes(cpf_cnpj="00000000000")
+tables = TransformProcessData.process_list(process_list=raw)
+process_df = tables["process"]
+involved_df = tables["involved"]
+```
+
+`process_list` returns `process` (one row per CNJ after deduplication),
+`process_by_court` (one row per court grade), and `involved` (parties
+with normalized roles and first-court polarity).
 
 ## API Reference
 
@@ -329,8 +357,8 @@ The library provides specific exception types:
 
 - `EscavadorAPIException`: Base error. Carries `message` and `payload`.
 - `EscavadorAPIAuthenticationError`: The auth token is empty.
-- `EscavadorAPIInvalidDocumentException`: The process number is not a
-  valid CNJ number.
+- `EscavadorAPIInvalidDocumentException`: The process number does not
+  have exactly 20 digits (verification is left to the Escavador API).
 - `EscavadorAPIInvalidParametersException`: A call is missing a required
   argument, such as both `cpf_cnpj` and `nome`.
 - `EscavadorAPIProblemAPIException`: The Escavador API returned an HTTP
@@ -356,8 +384,9 @@ Process numbers must follow the Brazilian CNJ
 - 20 digits total
 - Format: NNNNNNN-DD.AAAA.J.TR.OOOO
 
-The library automatically validates process numbers and accepts them
-with or without punctuation.
+`validate_process_number` strips punctuation and requires 20 digits.
+Escavador accepts or rejects the number on the server. Pass CNJ values
+as strings when leading zeros matter.
 
 ## Authentication
 
