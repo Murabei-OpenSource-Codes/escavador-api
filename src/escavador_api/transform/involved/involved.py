@@ -36,7 +36,12 @@ class TransformProcessInvolvedData:
         Returns:
             dict:
                 Person type, document, role, name, process count,
-                and OAB registrations.
+                OAB registrations, and ``invalid_document`` when CPF/CNPJ
+                length does not match ``type_person``.
+
+        Raises:
+            NotImplementedError:
+                If ``tipo_pessoa`` is set to an unsupported value.
         """
         # Extract information about the involved
         name = involved_data.get('nome')

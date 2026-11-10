@@ -118,7 +118,21 @@ class TransformCourtData:
 
     @classmethod
     def run(cls, court_data: dict) -> dict:
-        """Transform the process data."""
+        """Normalize tribunal fields from one Escavador fonte.
+
+        Args:
+            court_data (dict):
+                ``tribunal`` object from the API (``id``, ``nome``,
+                ``sigla``, ``categoria``).
+
+        Returns:
+            dict:
+                ``court_id``, ``court_name``, ``court_acronym``
+                (alphanumeric, uppercased), ``court_category``, and
+                ``court_state``. ``court_state`` is a comma-separated UF
+                list from ``TRIBUNAL_TO_UF``, or ``None`` when the acronym
+                is unknown.
+        """
         court_id = court_data.get('id')
         court_name = court_data.get('nome')
         court_acronym = court_data.get('sigla')

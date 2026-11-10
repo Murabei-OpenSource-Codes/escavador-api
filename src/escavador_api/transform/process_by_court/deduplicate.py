@@ -2,7 +2,7 @@
 
 For each ``numero_cnj``, keeps the highest ``court_grade`` row and
 left-joins first-instance court and class fields prefixed with
-``first_court__``.
+``first_court_``.
 """
 import pandas as pd
 
@@ -25,20 +25,19 @@ class TransformDeduplicateProcessByCourt:
 
         The output row comes from the largest ``court_grade`` for each
         ``numero_cnj``. Grade-1 court and class columns are merged in with
-        the ``first_court__`` prefix (except ``numero_cnj``).
+        the ``first_court_`` prefix (except ``numero_cnj``).
 
         Args:
             process_by_court (pd.DataFrame):
                 Rows from ``TransformProcessData.process`` or
                 ``process_list``. Must include ``numero_cnj``,
-                ``court_grade``, and the first-instance columns read from
-                grade 1 (court id/name/acronym/category, class and subject
-                codes and names).
+                ``court_grade``, and the columns in
+                ``FIRST_COURT_COLUMNS``.
 
         Returns:
             pd.DataFrame:
                 One row per ``numero_cnj``: columns from the highest
-                ``court_grade`` row, plus ``first_court__*`` columns when
+                ``court_grade`` row, plus ``first_court_*`` columns when
                 a grade-1 row exists.
 
         Raises:

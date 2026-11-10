@@ -1,4 +1,4 @@
-"""Auxiliary class to treat data from Escavador API."""
+"""Transform Escavador process payloads into tabular data."""
 import pandas as pd
 
 # Local imports
@@ -64,7 +64,9 @@ class TransformProcessData:
 
         Returns:
             dict:
-                ``process_by_court`` and ``involved`` DataFrames.
+                ``process``: deduplicated rows per ``numero_cnj``.
+                ``process_by_court``: one row per court grade.
+                ``involved``: parties with role and first-court polarity.
         """
         list_process_by_court = []
         list_process = []
@@ -118,9 +120,11 @@ class TransformProcessData:
 
         Returns:
             dict:
-                ``process_by_court`` is one row per court grade.
-                ``involved`` is one row per party after duplicates
-                are removed.
+                ``process_by_court``: one row per court grade.
+                ``process``: one row per CNJ from
+                ``TransformDeduplicateProcessByCourt``.
+                ``involved``: unique parties per grade (and
+                ``numero_cnj``) after ``aggregate_involved``.
         """
         list_transformed_sources = []
         list_involved_treated = []
@@ -232,7 +236,9 @@ class TransformProcessData:
         Returns:
             pd.DataFrame:
                 Unique parties, without ``source_id``, with
-                ``numero_cnj``.
+                ``numero_cnj``. When duplicates share the same keys,
+                the row with ``invalid_document`` set to ``False``
+                is kept.
 
         Raises:
             EscavadorAPIInvalidDocumentException:
@@ -387,7 +393,8 @@ class TransformProcessData:
 
         Returns:
             dict:
-                Court id, name, acronym, and category.
+                Court id, name, acronym, category, and ``court_state``
+                (UF list from ``TransformCourtData``).
         """
         court_data = source_data.get('tribunal') or {}
         transformed_court = TransformCourtData\
