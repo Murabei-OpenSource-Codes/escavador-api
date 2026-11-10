@@ -113,7 +113,7 @@ api = EscavadorAPI("your_auth_token_here")
 balance = api.get_credit_balance()
 print(balance)
 
-# Get process information. The number must be a valid CNJ.
+# Get process information. The number must have 20 CNJ digits.
 process_info = api.get_process_info("00000016620260000001")
 print(process_info)
 ```
@@ -419,7 +419,7 @@ python -m unittest discover -s src/escavador_api/tests
 Tests use `unittest` and call the live Escavador API. Set:
 
 - `ESCAVADOR_AUTH_TOKEN`: API token passed into `EscavadorAPI`
-- `TEST_PROCESS_NUMBER`: A valid CNJ number for process tests
+- `TEST_PROCESS_NUMBER`: A 20-digit CNJ string for process tests
 - `TEST_CPF_NUMBER`: A CPF for related-process tests
 
 ```bash

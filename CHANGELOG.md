@@ -6,6 +6,23 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.16] - 2026-11-10
+
+### Changed
+- README ETL section, transform feature bullet, and installation notes
+  for pandas and `python-slugify`
+
+## [0.1.15] - 2026-11-10
+
+### Added
+- `request_process_public_documents` — POST update with
+  `{"documentos_publicos": 1}` on `solicitar-atualizacao`
+- `get_process_documents` — paginated `GET .../documentos-publicos`
+- `test__public_documents` integration tests
+
+### Changed
+- README API reference and pagination list for the new document routes
+
 ## [0.1.13] - 2026-11-10
 
 ### Added
