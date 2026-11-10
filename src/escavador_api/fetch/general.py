@@ -4,13 +4,13 @@ Calls to ends points that will return information about the API, like credit
 balance and monthly limit, but not related to any specific process, people or
 companies.
 """
-from escavador_api.aux.base import BaseMixin
+from escavador_api.fetch.base import FetchBaseMixin
 
 
-class GeneralMixin(BaseMixin):
+class FetchGeneralMixin(FetchBaseMixin):
     """Mixin to handle general calls to Escavador API."""
 
-    def get_credit_balance(self):
+    def get_credit_balance(self) -> dict:
         """Returns current credit balance.
 
         Returns:

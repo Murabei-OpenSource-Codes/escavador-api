@@ -1,80 +1,27 @@
 """Module to handle processes requests."""
-import re
-from typing import Literal, TypedDict, Any
-from escavador_api.exceptions import (
-    EscavadorAPIInvalidDocumentException, EscavadorAPIProblemAPIException)
+from typing import Any, Iterator, Literal, TypedDict
+from escavador_api.exceptions import EscavadorAPIProblemAPIException
 
 
 # Local imports
-from escavador_api.aux.base import BaseMixin
+from escavador_api.fetch.base import FetchBaseMixin
+from escavador_api.utils.process import (
+    validate_process_number, format_process_number)
 
 
 class KeywordDict(TypedDict):
     """Special type for parameter in `create_monitoring_new_process`.
 
-    Used as parameter typing for `create_monitoring_new_process`."""
+    Used as parameter typing for `create_monitoring_new_process`.
+    """
     condicao: Literal["CONTEM", "NAO_CONTEM", "CONTEM_ALGUMA"]
     termo: str
 
 
-class ProcessMixin(BaseMixin):
+class FetchProcessMixin(FetchBaseMixin):
     """Mixin to handle processes requests."""
 
-    def validate_process_number(self, process_number: str | int) -> bool:
-        """Validate process number.
-
-        - Must have exactly 20 digits.
-        - First 7 digits must follow a specific sequence.
-        - Last 2 digits (verification digits) must be validated based on
-        initial sequence.
-
-        Args:
-            process_number (str | int):
-                process number to be validated.
-
-        Returns:
-            bool: Whether process number is valid.
-
-        Raises:
-            EscavadorAPIInvalidDocumentException:
-                If the provided process number is not a valid CNJ number.
-        """
-        # Checks if process_number is a string or int
-        if not isinstance(process_number, (str, int)):
-            msg = "Process number must be a string or an integer"
-            raise EscavadorAPIInvalidDocumentException(
-                message=msg,
-                payload={"process_number": process_number})
-
-        process_number = str(process_number)
-        digits = [int(digit) for digit in process_number if digit.isdigit()]
-
-        if len(digits) != 20:
-            msg = "Process number is not in a valid CNJ format"
-            raise EscavadorAPIInvalidDocumentException(
-                message=msg,
-                payload={"process_number": process_number})
-
-        digits = "".join(str(num) for num in digits)
-
-        sequence = digits[:7]
-        verification_digits = digits[7:9]
-        remaining_digits = digits[9:]
-
-        # Calculate expected verification digits
-        number_without_vd = sequence + remaining_digits
-        remainder = int(number_without_vd) * 100 % 97
-        calculated_vd = 98 - remainder
-        calculated_vd_str = f"{calculated_vd:02d}"
-
-        if verification_digits != calculated_vd_str:
-            msg = "Invalid process number"
-            raise EscavadorAPIInvalidDocumentException(
-                message=msg,
-                payload={"process_number": process_number})
-        return True
-
-    def get_courts(self):
+    def get_courts(self) -> dict:
         """List all available courts for searches in Escavador.
 
         Returns:
@@ -91,7 +38,7 @@ class ProcessMixin(BaseMixin):
         url = "v2/tribunais"
         return self.get(url=url)
 
-    def get_process_info(self, process_number: str):
+    def get_process_info(self, process_number: str) -> dict:
         """Retrieve process information from Escavador using CNJ number.
 
         This is a paid request.
@@ -115,12 +62,12 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}"\
             .format(process_number=process_number)
         return self.get(url=url)
 
-    def get_process_updates(self, process_number: str):
+    def get_process_updates(self, process_number: str) -> Iterator[dict]:
         """Retrieve process updates from Escavador using CNJ number.
 
         This is a paid request.
@@ -144,12 +91,13 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/movimentacoes"\
             .format(process_number=process_number)
         return self.fetch_paginated(url=url)
 
-    def get_process_public_documents(self, process_number: str):
+    def get_process_public_documents(self, process_number: str
+                                     ) -> Iterator[dict]:
         """Retrieve available public documents associated with a CNJ number.
 
         This is a paid request.
@@ -172,12 +120,13 @@ class ProcessMixin(BaseMixin):
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
         """
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/documentos-publicos"\
             .format(process_number=process_number)
         return self.fetch_paginated(url=url)
 
-    def get_process_all_documents(self, process_number: str):
+    def get_process_all_documents(self, process_number: str
+                                  ) -> Iterator[dict]:
         """Retrieve all available documents associated with a CNJ number.
 
         This is a paid request.
@@ -204,12 +153,12 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/autos"\
             .format(process_number=process_number)
         return self.fetch_paginated(url=url)
 
-    def request_process_update_public(self, process_number: str):
+    def request_process_update_public(self, process_number: str) -> dict:
         """Request update to public process information using CNJ number.
 
         This is a paid request.
@@ -236,7 +185,7 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         url = "v2/processos/numero_cnj/{process_number}/solicitar-atualizacao"\
             .format(process_number=process_number)
@@ -290,7 +239,7 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         url = (
             "v2/processos/numero_cnj/{process_number}/solicitar-atualizacao"
@@ -326,7 +275,7 @@ class ProcessMixin(BaseMixin):
             data["certificado_id"] = certificate_id
         return self.post(data=data, url=url)
 
-    def get_process_update_status(self, process_number: str):
+    def get_process_update_status(self, process_number: str) -> dict:
         """Retrieve search request status.
 
         This is a paid request.
@@ -350,13 +299,14 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         url = "v2/processos/numero_cnj/{process_number}/status-atualizacao"\
             .format(process_number=process_number)
         return self.get(url=url)
 
-    def download_process_file(self, process_number: str, file_key: str):
+    def download_process_file(self, process_number: str, file_key: str
+                              ) -> bytes:
         """Download PDF file of process documents.
 
         This is a paid request.
@@ -383,20 +333,12 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         # Clean special characters from CNJ number and
         # ensure correct punctuation (required for downloads)
         # Format: NNNNNNN-DD.AAAA.J.TR.OOOO
-        process_number = re.sub(r'\D', '', process_number)
-        formatted_process_number = (
-            process_number[0:7] + "-" +
-            process_number[7:9] + "." +
-            process_number[9:13] + "." +
-            process_number[13] + "." +
-            process_number[14:16] + "." +
-            process_number[16:20])
-
+        formatted_process_number = format_process_number(process_number)
         url = (
             "v2/processos/numero_cnj/{formatted_process_number}/"
             "documentos/{file_key}").format(
@@ -414,7 +356,7 @@ class ProcessMixin(BaseMixin):
                 "process_number": process_number,
                 "file_key": file_key})
 
-    def request_ai_summary(self, process_number: str):
+    def request_ai_summary(self, process_number: str) -> dict:
         """Request a summary of available process information using CNJ number.
 
         This is a paid request.
@@ -438,14 +380,14 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
         url = (
             "v2/processos/numero_cnj/{process_number}/ia/"
             "resumo/solicitar-atualizacao")\
             .format(process_number=process_number)
         return self.post(url=url)
 
-    def get_ai_summary_status(self, process_number: str):
+    def get_ai_summary_status(self, process_number: str) -> dict:
         """Retrieve AI summary generation status.
 
         Args:
@@ -467,13 +409,13 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         url = "v2/processos/numero_cnj/{process_number}/ia/resumo/status"\
             .format(process_number=process_number)
         return self.get(url=url)
 
-    def get_ai_summary(self, process_number: str):
+    def get_ai_summary(self, process_number: str) -> dict:
         """Retrieve AI summary.
 
         This is a paid request.
@@ -497,7 +439,7 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         url = "v2/processos/numero_cnj/{process_number}/ia/resumo"\
             .format(process_number=process_number)
@@ -577,7 +519,7 @@ class ProcessMixin(BaseMixin):
 
         return self.post(url=url, json=data)
 
-    def list_monitoring_new_process(self):
+    def list_monitoring_new_process(self) -> Iterator[dict]:
         """Retrieve a list of new process monitorings created.
 
         Returns:
@@ -594,7 +536,7 @@ class ProcessMixin(BaseMixin):
         url = "v2/monitoramentos/novos-processos"
         return self.fetch_paginated(url=url)
 
-    def get_monitoring_new_process(self, monitoring_id: int):
+    def get_monitoring_new_process(self, monitoring_id: int) -> dict:
         """Retrieve the details of a monitoring by ID.
 
         Args:
@@ -616,7 +558,8 @@ class ProcessMixin(BaseMixin):
             .format(monitoring_id=monitoring_id)
         return self.get(url=url)
 
-    def delete_monitoring_new_process(self, monitoring_id: int):
+    def delete_monitoring_new_process(self, monitoring_id: int
+                                      ) -> bool | dict:
         """Delete a monitoring by ID.
 
         Args:
@@ -624,8 +567,9 @@ class ProcessMixin(BaseMixin):
                 New process monitoring ID.
 
         Returns:
-            bool:
-                True if deletion is successful.
+            bool | dict:
+                True when the API responds with status 204.
+                Parsed JSON otherwise.
 
         Raises:
             EscavadorAPIProblemAPIException:
@@ -637,7 +581,8 @@ class ProcessMixin(BaseMixin):
             .format(monitoring_id=monitoring_id)
         return self.delete(url=url)
 
-    def get_results_monitoring_new_process(self, monitoring_id: int):
+    def get_results_monitoring_new_process(self, monitoring_id: int
+                                           ) -> Iterator[dict]:
         """Retrieve the results of a new process monitoring.
 
         Args:
@@ -765,7 +710,7 @@ class ProcessMixin(BaseMixin):
                 If an unexpected error occurs during the request.
         """
         # Checks if process number is valid before sending request
-        self.validate_process_number(process_number)
+        process_number = validate_process_number(process_number)
 
         url = "v2/monitoramentos/processos"
 
@@ -776,7 +721,7 @@ class ProcessMixin(BaseMixin):
             data['frequencia'] = frequency
         return self.post(url=url, json=data)
 
-    def list_monitoring_existing_process(self):
+    def list_monitoring_existing_process(self) -> Iterator[dict]:
         """Retrieve a list of existing process monitorings created.
 
         Returns:
@@ -793,7 +738,7 @@ class ProcessMixin(BaseMixin):
         url = "v2/monitoramentos/processos"
         return self.fetch_paginated(url=url)
 
-    def get_monitoring_existing_process(self, monitoring_id: int):
+    def get_monitoring_existing_process(self, monitoring_id: int) -> dict:
         """Retrieve the details of a monitoring by ID.
 
         Args:
@@ -815,7 +760,8 @@ class ProcessMixin(BaseMixin):
             .format(monitoring_id=monitoring_id)
         return self.get(url=url)
 
-    def delete_monitoring_existing_process(self, monitoring_id: int):
+    def delete_monitoring_existing_process(self, monitoring_id: int
+                                          ) -> bool | dict:
         """Delete a monitoring by ID.
 
         Args:
@@ -823,8 +769,9 @@ class ProcessMixin(BaseMixin):
                 Existing process monitoring ID.
 
         Returns:
-            bool:
-                True if deletion is successful.
+            bool | dict:
+                True when the API responds with status 204.
+                Parsed JSON otherwise.
 
         Raises:
             EscavadorAPIProblemAPIException:
