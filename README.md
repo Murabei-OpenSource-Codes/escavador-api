@@ -92,7 +92,8 @@ be positive integers. A missing or blank value keeps the default.
 Any other value raises `ValueError` at import.
 
 Paginated calls are `get_process_updates`,
-`get_process_public_documents`, `get_process_all_documents`,
+`get_process_public_documents`, `get_process_documents`,
+`get_process_all_documents`,
 `get_related_processes`, `list_monitoring_new_process`,
 `get_results_monitoring_new_process`, and
 `list_monitoring_existing_process`.
@@ -112,7 +113,7 @@ api = EscavadorAPI("your_auth_token_here")
 balance = api.get_credit_balance()
 print(balance)
 
-# Get process information. The number must be a valid CNJ.
+# Get process information. The number must have 20 CNJ digits.
 process_info = api.get_process_info("00000016620260000001")
 print(process_info)
 ```
@@ -185,12 +186,25 @@ get_process_public_documents(process_number: str)
 Yields one dictionary per public document. **(paid)**
 
 ```python
+get_process_documents(process_number: str)
+```
+Yields one dictionary per public document from
+`GET .../documentos-publicos`. Each item carries `key` and
+`links.api` when the API sends them. **(paid)**
+
+```python
 get_process_all_documents(process_number: str)
 ```
 Yields one dictionary per document, including restricted documents
 when the caller is authorized. **(paid)**
 
 #### Process Updates
+
+```python
+request_process_public_documents(process_number: str) -> dict
+```
+Request a public-document update with JSON
+`{"documentos_publicos": 1}`. **(paid)**
 
 ```python
 request_process_update_public(process_number: str) -> dict
@@ -405,7 +419,7 @@ python -m unittest discover -s src/escavador_api/tests
 Tests use `unittest` and call the live Escavador API. Set:
 
 - `ESCAVADOR_AUTH_TOKEN`: API token passed into `EscavadorAPI`
-- `TEST_PROCESS_NUMBER`: A valid CNJ number for process tests
+- `TEST_PROCESS_NUMBER`: A 20-digit CNJ string for process tests
 - `TEST_CPF_NUMBER`: A CPF for related-process tests
 
 ```bash
