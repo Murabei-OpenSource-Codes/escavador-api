@@ -81,7 +81,8 @@ be positive integers. A missing or blank value keeps the default.
 Any other value raises `ValueError` at import.
 
 Paginated calls are `get_process_updates`,
-`get_process_public_documents`, `get_process_all_documents`,
+`get_process_public_documents`, `get_process_documents`,
+`get_process_all_documents`,
 `get_related_processes`, `list_monitoring_new_process`,
 `get_results_monitoring_new_process`, and
 `list_monitoring_existing_process`.
@@ -157,12 +158,25 @@ get_process_public_documents(process_number: str)
 Yields one dictionary per public document. **(paid)**
 
 ```python
+get_process_documents(process_number: str)
+```
+Yields one dictionary per public document from
+`GET .../documentos-publicos`. Each item carries `key` and
+`links.api` when the API sends them. **(paid)**
+
+```python
 get_process_all_documents(process_number: str)
 ```
 Yields one dictionary per document, including restricted documents
 when the caller is authorized. **(paid)**
 
 #### Process Updates
+
+```python
+request_process_public_documents(process_number: str) -> dict
+```
+Request a public-document update with JSON
+`{"documentos_publicos": 1}`. **(paid)**
 
 ```python
 request_process_update_public(process_number: str) -> dict

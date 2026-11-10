@@ -125,6 +125,38 @@ class FetchProcessMixin(FetchBaseMixin):
             .format(process_number=process_number)
         return self.fetch_paginated(url=url)
 
+    def get_process_documents(self, process_number: str
+                              ) -> Iterator[dict]:
+        """Yield public documents for a CNJ number.
+
+        This is a paid request. The list route is
+        ``GET .../documentos-publicos``. ``GET .../documentos/{key}``
+        downloads one file and is not a list. Each item includes
+        ``key`` and ``links.api`` when the API sends them.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+
+        Returns:
+            Generator:
+                Dictionaries representing documents associated with
+                the process. One item is yielded per API result.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        process_number = validate_process_number(process_number)
+        url = "v2/processos/numero_cnj/{process_number}/documentos-publicos"\
+            .format(process_number=process_number)
+        return self.fetch_paginated(url=url)
+
     def get_process_all_documents(self, process_number: str
                                   ) -> Iterator[dict]:
         """Retrieve all available documents associated with a CNJ number.
@@ -157,6 +189,36 @@ class FetchProcessMixin(FetchBaseMixin):
         url = "v2/processos/numero_cnj/{process_number}/autos"\
             .format(process_number=process_number)
         return self.fetch_paginated(url=url)
+
+    def request_process_public_documents(self, process_number: str) -> dict:
+        """Request a public-document update for a CNJ number.
+
+        This is a paid request. The body is JSON
+        ``{"documentos_publicos": 1}``.
+
+        Args:
+            process_number (str):
+                Process number following CNJ format (20 digits). Punctuation
+                is optional.
+
+        Returns:
+            dict:
+                JSON response returned by the Escavador API with
+                the search request status.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If process_number is not a valid CNJ number.
+            EscavadorAPIProblemAPIException:
+                If the Escavador API returns an HTTP error.
+            EscavadorAPIUnmappedErrorException:
+                If an unexpected error occurs during the request.
+        """
+        process_number = validate_process_number(process_number)
+        url = "v2/processos/numero_cnj/{process_number}/solicitar-atualizacao"\
+            .format(process_number=process_number)
+        data = {"documentos_publicos": 1}
+        return self.post(json=data, url=url)
 
     def request_process_update_public(self, process_number: str) -> dict:
         """Request update to public process information using CNJ number.

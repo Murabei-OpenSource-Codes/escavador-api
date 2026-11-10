@@ -6,6 +6,14 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [Unreleased]
+
+### Added
+- `request_process_public_documents` posts JSON
+  `{"documentos_publicos": 1}` on `solicitar-atualizacao` through
+  `FetchBaseMixin.post`
+- `get_process_documents` yields `GET .../documentos-publicos`
+
 ## [0.1.12] - 2026-10-26
 
 ### Added
