@@ -3,10 +3,10 @@ from typing import Literal
 
 # Local imports
 from escavador_api.exceptions import EscavadorAPIInvalidParametersException
-from escavador_api.aux.base import BaseMixin
+from escavador_api.fetch.base import FetchBaseMixin
 
 
-class RelatedProcessMixin(BaseMixin):
+class FetchRelatedProcessMixin(FetchBaseMixin):
     """Class to handle related processes for persons and companies."""
 
     def get_related_processes(self,

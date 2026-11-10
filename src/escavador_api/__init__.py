@@ -10,3 +10,7 @@ Import the client from ``escavador_api.data``::
 The token is required. Request timeout and proxy come from
 ``escavador_api.config``.
 """
+from escavador_api.data import EscavadorAPI
+
+__all__ = [
+    "EscavadorAPI"]

@@ -1,9 +1,10 @@
 """Escavador API."""
-from escavador_api.aux import (
-    GeneralMixin, ProcessMixin, RelatedProcessMixin)
+from escavador_api.fetch import (
+    FetchGeneralMixin, FetchProcessMixin, FetchRelatedProcessMixin)
 
 
-class EscavadorAPI(GeneralMixin, ProcessMixin, RelatedProcessMixin):
+class EscavadorAPI(FetchGeneralMixin, FetchProcessMixin,
+                   FetchRelatedProcessMixin):
     """Main class to interact with Escavador endpoints."""
 
     def __init__(self, escavador_auth_token: str):

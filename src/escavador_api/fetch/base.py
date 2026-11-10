@@ -2,19 +2,18 @@
 import requests
 from loguru import logger
 from urllib.parse import urljoin
-from escavador_api.aux.misc import retry_on_network_errors
+from escavador_api.fetch.misc import (
+    RETRY_ERRORS, retry_on_network_errors)
 from escavador_api.exceptions import (
-    EscavadorAPIInvalidDocumentException, EscavadorAPIProblemAPIException,
-    EscavadorAPIUnmappedErrorException, EscavadorAPIAuthenticationError)
-from tenacity import (
-    retry, retry_if_exception_type, stop_after_attempt, wait_fixed,)
-from typing import Literal, TypedDict, Any
+    EscavadorAPIProblemAPIException, EscavadorAPIUnmappedErrorException,
+    EscavadorAPIAuthenticationError)
+from typing import Any, Iterator
 
 # Local imports
 from escavador_api.config import MAX_PAGES, PROXY_URL, REQUEST_TIMEOUT
 
 
-class BaseMixin:
+class FetchBaseMixin:
     """Base mixin for auxiliary classes."""
 
     session: requests.Session
@@ -73,6 +72,10 @@ class BaseMixin:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
+            requests.ConnectionError:
+                If the connection still fails after 5 attempts.
+            requests.Timeout:
+                If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -87,7 +90,8 @@ class BaseMixin:
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={"error": str(e)})
-
+        except RETRY_ERRORS:
+            raise
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
@@ -113,6 +117,10 @@ class BaseMixin:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
+            requests.ConnectionError:
+                If the connection still fails after 5 attempts.
+            requests.Timeout:
+                If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -127,7 +135,8 @@ class BaseMixin:
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={"error": str(e)})
-
+        except RETRY_ERRORS:
+            raise
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
@@ -158,6 +167,10 @@ class BaseMixin:
                 If the Escavador API returns an HTTP error.
             EscavadorAPIUnmappedErrorException:
                 If an unexpected error occurs during the request.
+            requests.ConnectionError:
+                If the connection still fails after 5 attempts.
+            requests.Timeout:
+                If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
         try:
@@ -172,7 +185,8 @@ class BaseMixin:
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={"error": str(e)})
-
+        except RETRY_ERRORS:
+            raise
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
@@ -217,6 +231,8 @@ class BaseMixin:
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={"error": str(e)})
+        except RETRY_ERRORS:
+            raise
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
@@ -263,13 +279,16 @@ class BaseMixin:
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={"error": str(e)})
+        except RETRY_ERRORS:
+            raise
         except Exception as e:
             msg = "Unmapped error"
             raise EscavadorAPIUnmappedErrorException(
                 message=msg,
                 payload={"error": str(e)})
 
-    def fetch_paginated(self, url: str, params: dict | None = None):
+    def fetch_paginated(self, url: str, params: dict | None = None
+                        ) -> Iterator[dict]:
         """Fetch data from the API.
 
         The first page is always requested. Further pages stop at
