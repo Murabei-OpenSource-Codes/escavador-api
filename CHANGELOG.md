@@ -6,6 +6,14 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.17] - 2026-11-11
+
+### Changed
+- `pyproject.toml` — declare `loguru`, `pandas`, and `python-slugify`
+  as package dependencies; list `requests` and `tenacity` without
+  pinned ranges
+- README Requirements — dependency list matches `pyproject.toml`
+
 ## [0.1.16] - 2026-11-10
 
 ### Changed

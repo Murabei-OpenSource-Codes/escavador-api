@@ -61,14 +61,15 @@ pip install .
 ## Requirements
 
 - Python >= 3.12
-- requests >= 2.32.5
-- tenacity >= 9.1.4
-- loguru >= 0.7.3
-- pandas >= 2.2.3
-- python-slugify >= 8.0.4
+- requests
+- tenacity
+- loguru
+- pandas
+- python-slugify
 
-Declared in `pyproject.toml`. **loguru** is used for pagination
-warnings in `FetchBaseMixin.fetch_paginated`. **pandas** and
+Declared in `pyproject.toml` (unpinned package names). **loguru**
+is used for pagination warnings in `FetchBaseMixin.fetch_paginated`.
+**pandas** and
 **python-slugify** support `escavador_api.transform` (role mapping).
 
 ## Configuration
