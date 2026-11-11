@@ -1,6 +1,6 @@
 [project]
 name = "escavador-api"
-version = "0.1.16-b.0"
+version = "0.1.17-b.0"
 description = "Python API to interact with Escavador endpoints"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,8 +13,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "requests (>=2.32.5,<3.0.0)",
-    "tenacity (>=9.1.4,<10.0.0)"
+    "requests",
+    "tenacity",
+    "loguru",
+    "pandas",
+    "python-slugify",
 ]
 
 [tool.poetry]

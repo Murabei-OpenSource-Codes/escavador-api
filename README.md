@@ -61,16 +61,16 @@ pip install .
 ## Requirements
 
 - Python >= 3.12
-- requests >= 2.32.5
-- tenacity >= 9.1.4
+- requests
+- tenacity
+- loguru
+- pandas
+- python-slugify
 
-Declared in `pyproject.toml`. The client also imports **loguru** for
-pagination warnings in `FetchBaseMixin.fetch_paginated`.
-
-Using **`escavador_api.transform`** additionally needs **pandas** and
-**python-slugify** (role mapping). Those are not listed in
-`pyproject.toml` yet; install them in ETL environments that call
-`TransformProcessData`.
+Declared in `pyproject.toml` (unpinned package names). **loguru**
+is used for pagination warnings in `FetchBaseMixin.fetch_paginated`.
+**pandas** and
+**python-slugify** support `escavador_api.transform` (role mapping).
 
 ## Configuration
 
