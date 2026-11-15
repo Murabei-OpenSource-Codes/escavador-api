@@ -6,6 +6,24 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.18] - 2026-11-15
+
+### Added
+- `TransformPartyRole.ROLE_MAPPING_DEFAULT` — 24 court roles that
+  previously warned and fell through to `other` / `other`
+- Judge / neutral: `juizo_deprecado`
+- Lawyer / other: `defensor_publico`
+- Party / active: `reconvinte`, `impugnante`, `arguente`,
+  `excipiente`
+- Party / passive: `impugnado`, `arguido`, `excepto`, `falido`,
+  `concordataria`
+- Party / other: `recorrente_recorrido`, `recorrido_recorrente`,
+  `apelante_recorrido`, `apelado_recorrente`,
+  `interessado_querelante`, `testador`, `autor_da_heranca`,
+  `legatario`, `curador`
+- Auxiliary / neutral: `amicus_curiae`, `leiloeiro`,
+  `administrador`, `liquidante`
+
 ## [0.1.17] - 2026-11-11
 
 ### Changed

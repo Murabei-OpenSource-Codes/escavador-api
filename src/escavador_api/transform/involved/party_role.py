@@ -46,6 +46,12 @@ class TransformPartyRole:
                 normalized_role="judge",
                 normalized_polarity="neutral"),
         },
+        {
+            "key": "juizo_deprecado",
+            "value": PartyRole(
+                normalized_role="judge",
+                normalized_polarity="neutral"),
+        },
 
         ###########
         # Lawyers #
@@ -72,6 +78,13 @@ class TransformPartyRole:
         # Not possible to determine
         {
             "key": "advogado",
+            "value": PartyRole(
+                normalized_role="lawyer",
+                normalized_polarity="other"),
+        },
+        # Public defender acts for either side, same rule as advogado.
+        {
+            "key": "defensor_publico",
             "value": PartyRole(
                 normalized_role="lawyer",
                 normalized_polarity="other"),
@@ -192,6 +205,30 @@ class TransformPartyRole:
         # in Brazil, it is active asking for the benefit of the law
         {
             "key": "beneficiario",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="active"),
+        },
+        {
+            "key": "reconvinte",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="active"),
+        },
+        {
+            "key": "impugnante",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="active"),
+        },
+        {
+            "key": "arguente",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="active"),
+        },
+        {
+            "key": "excipiente",
             "value": PartyRole(
                 normalized_role="party",
                 normalized_polarity="active"),
@@ -354,6 +391,37 @@ class TransformPartyRole:
                 normalized_role="party",
                 normalized_polarity="passive"),
         },
+        {
+            "key": "impugnado",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="passive"),
+        },
+        {
+            "key": "arguido",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="passive"),
+        },
+        {
+            "key": "excepto",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="passive"),
+        },
+        {
+            "key": "falido",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="passive"),
+        },
+        # Insolvent debtor under the old concordata. Same side as falido.
+        {
+            "key": "concordataria",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="passive"),
+        },
 
         # Other party
         {
@@ -380,6 +448,56 @@ class TransformPartyRole:
                 normalized_role="party",
                 normalized_polarity="other"),
         },
+        {
+            "key": "recorrente_recorrido",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        {
+            "key": "recorrido_recorrente",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        {
+            "key": "apelante_recorrido",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        {
+            "key": "apelado_recorrente",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        {
+            "key": "interessado_querelante",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        # Deceased whose estate is the subject of the succession.
+        {
+            "key": "testador",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        {
+            "key": "autor_da_heranca",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        # Beneficiary of a legacy. Side is not fixed.
+        {
+            "key": "legatario",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
 
 
         ########################################
@@ -392,6 +510,31 @@ class TransformPartyRole:
         },
         {
             "key": "testemunha",
+            "value": PartyRole(
+                normalized_role="auxiliary",
+                normalized_polarity="neutral"),
+        },
+        {
+            "key": "amicus_curiae",
+            "value": PartyRole(
+                normalized_role="auxiliary",
+                normalized_polarity="neutral"),
+        },
+        {
+            "key": "leiloeiro",
+            "value": PartyRole(
+                normalized_role="auxiliary",
+                normalized_polarity="neutral"),
+        },
+        # Court officer. A company officer with this label is a party.
+        {
+            "key": "administrador",
+            "value": PartyRole(
+                normalized_role="auxiliary",
+                normalized_polarity="neutral"),
+        },
+        {
+            "key": "liquidante",
             "value": PartyRole(
                 normalized_role="auxiliary",
                 normalized_polarity="neutral"),
@@ -418,6 +561,13 @@ normalized_polarity="other"),
         # Representatives
         {
             "key": "representante",
+            "value": PartyRole(
+                normalized_role="party",
+                normalized_polarity="other"),
+        },
+        # Guardian of an interdicted person. Same rule as representante.
+        {
+            "key": "curador",
             "value": PartyRole(
                 normalized_role="party",
                 normalized_polarity="other"),
