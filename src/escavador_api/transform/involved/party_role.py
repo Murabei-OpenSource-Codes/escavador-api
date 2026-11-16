@@ -1,632 +1,534 @@
 """Module to nomilize the party role on the process."""
 import pandas as pd
 from dataclasses import dataclass
-from typing import Literal, TypedDict
+from typing import Literal
 from slugify import slugify
 from loguru import logger
 
 
 @dataclass
 class PartyRole:
-    """Class to represent the party role."""
+    """One source slug and its normalized role and polarity."""
 
+    key: str
     normalized_role: Literal[
-        "judge", "lawyer", "party", "auxiliary",
+        "judge", "court", "lawyer", "party", "third_party",
+        "auxiliary", "fiscal", "representative", "unknown",
         "other"]
     normalized_polarity: Literal[
         "active", "passive", "neutral", "other"]
 
 
-class PartyRoleEntry(TypedDict):
-    """One source role and its normalized role."""
-
-    key: str
-    value: PartyRole
-
-
 class TransformPartyRole:
     """Transform the party role on the process."""
 
-    ROLE_MAPPING_DEFAULT: list[PartyRoleEntry] = [
-        {
-            "key": "juiz",
-            "value": PartyRole(
-                normalized_role="judge",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "juizo_deprecante",
-            "value": PartyRole(
-                normalized_role="judge",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "juizo_recorrente",
-            "value": PartyRole(
-                normalized_role="judge",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "juizo_deprecado",
-            "value": PartyRole(
-                normalized_role="judge",
-                normalized_polarity="neutral"),
-        },
-
-        ###########
-        # Lawyers #
-        # Active
-        {
-            "key": "promotor_de_justica",
-            "value": PartyRole(
-                normalized_role="lawyer",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "procurador_de_justica",
-            "value": PartyRole(
-                normalized_role="lawyer",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "procurador",
-            "value": PartyRole(
-                normalized_role="lawyer",
-                normalized_polarity="active"),
-        },
-
-        # Not possible to determine
-        {
-            "key": "advogado",
-            "value": PartyRole(
-                normalized_role="lawyer",
-                normalized_polarity="other"),
-        },
-        # Public defender acts for either side, same rule as advogado.
-        {
-            "key": "defensor_publico",
-            "value": PartyRole(
-                normalized_role="lawyer",
-                normalized_polarity="other"),
-        },
-
-        ###########
-        # Parties #
-        # Active (Attack / Enforcement / Appeals) #
-        {
-            "key": "ministerio_publico",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "autor",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "coautor",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "requerente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "reclamante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "demandante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "exequente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "impetrante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "suscitante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "investigante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "ordenante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "litisconsorte_ativo",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "notificante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "recorrente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "apelante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "agravante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "embargante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "paciente_impetrante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        # Normally associated with a beneficiary role of free law
-        # in Brazil, it is active asking for the benefit of the law
-        {
-            "key": "beneficiario",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "reconvinte",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "impugnante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "arguente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-        {
-            "key": "excipiente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="active"),
-        },
-
-        # Passive (Defense / Targets)
-        {
-            "key": "reu",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "correu",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "requerido",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "notificado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "reclamado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "demandado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "executado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "impetrado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "autoridade",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "acusado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "denunciado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "investigado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "averiguado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "flagranteado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "interditado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "representado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "suscitado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "ordenado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "recorrido",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "apelado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "agravado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "embargado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "vitima",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "indiciado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "paciente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "litisconsorte_passivo",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "impugnado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "arguido",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "excepto",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        {
-            "key": "falido",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-        # Insolvent debtor under the old concordata. Same side as falido.
-        {
-            "key": "concordataria",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="passive"),
-        },
-
-        # Other party
-        {
-            "key": "litisconsorte",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "espolio",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "apelante_apelado",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "apelado_apelante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "recorrente_recorrido",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "recorrido_recorrente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "apelante_recorrido",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "apelado_recorrente",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "interessado_querelante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        # Deceased whose estate is the subject of the succession.
-        {
-            "key": "testador",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        {
-            "key": "autor_da_heranca",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        # Beneficiary of a legacy. Side is not fixed.
-        {
-            "key": "legatario",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-
-
-        ########################################
-        # Auxiliary, Witnesses & Third Parties #
-        {
-            "key": "perito",
-            "value": PartyRole(
-                normalized_role="auxiliary",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "testemunha",
-            "value": PartyRole(
-                normalized_role="auxiliary",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "amicus_curiae",
-            "value": PartyRole(
-                normalized_role="auxiliary",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "leiloeiro",
-            "value": PartyRole(
-                normalized_role="auxiliary",
-                normalized_polarity="neutral"),
-        },
-        # Court officer. A company officer with this label is a party.
-        {
-            "key": "administrador",
-            "value": PartyRole(
-                normalized_role="auxiliary",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "liquidante",
-            "value": PartyRole(
-                normalized_role="auxiliary",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "assistente",
-            "value": PartyRole(
-                normalized_role="other",
-normalized_polarity="neutral"),
-        },
-        {
-            "key": "interessado",
-            "value": PartyRole(
-                normalized_role="other",
-normalized_polarity="other"),
-        },
-        {
-            "key": "outro",
-            "value": PartyRole(
-                normalized_role="other",
-                normalized_polarity="other"),
-        },
-
-        # Representatives
-        {
-            "key": "representante",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-        # Guardian of an interdicted person. Same rule as representante.
-        {
-            "key": "curador",
-            "value": PartyRole(
-                normalized_role="party",
-                normalized_polarity="other"),
-        },
-
-        # Other special types of judges with more generical names
-        {
-            "key": "deprecado",
-            "value": PartyRole(
-                normalized_role="judge",
-                normalized_polarity="neutral"),
-        },
-        {
-            "key": "remetente",
-            "value": PartyRole(
-                normalized_role="judge",
-                normalized_polarity="neutral"),
-        },
+    ROLE_MAPPING_DEFAULT: list[PartyRole] = [
+        # ----------------------------------------------------
+        # Judge & Court Offices (Neutral)
+        # ----------------------------------------------------
+        PartyRole(
+            key="juiz",
+            normalized_role="judge",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="desembargador",
+            normalized_role="judge",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="juizo_deprecante",
+            normalized_role="court",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="juizo_recorrente",
+            normalized_role="court",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="deprecado",
+            normalized_role="court",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="juizo_deprecado",
+            normalized_role="court",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="remetente",
+            normalized_role="court",
+            normalized_polarity="neutral"),
+        # ----------------------------------------------------
+        # Lawyers & Prosecutors
+        # ----------------------------------------------------
+        PartyRole(
+            key="advogado",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="defensor_publico",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="procurador",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="promotor_de_justica",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="procurador_de_justica",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        # ----------------------------------------------------
+        # Active Parties (Claimants, Prosecutors, Appellants, Beneficiaries)
+        # ----------------------------------------------------
+        PartyRole(
+            key="autor",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="coautor",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="beneficiario",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="requerente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="reclamante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="demandante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="exequente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="credor",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="cessionario",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="impetrante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="paciente_impetrante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="suscitante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="investigante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="ordenante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="litisconsorte_ativo",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="opoente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="recorrente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="apelante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="agravante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="embargante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="impugnante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="notificante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="excipiente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="agravante_recorrente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="querelante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="promovente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="inventariante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="confrontante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="reconvinte",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="arguente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="liquidante",
+            normalized_role="auxiliary",
+            normalized_polarity="active"),
+        PartyRole(
+            key="arrematante",
+            normalized_role="third_party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="vitima",
+            normalized_role="party",
+            normalized_polarity="active"),
+        # ----------------------------------------------------
+        # Passive Parties (Defendants, Respondents, Targets)
+        # ----------------------------------------------------
+        PartyRole(
+            key="reu",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="correu",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="requerido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="reclamado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="demandado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="executado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="devedor",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="reconvido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="impetrado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="autoridade",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="acusado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="denunciado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="notificado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="falido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="concordataria",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="inventariado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="querelado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="promovido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="autor_do_fato",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="indiciado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="investigado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="flagranteado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="paciente",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="interditado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="representado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="suscitado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="arguido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="ordenado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="oposto",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="recorrido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="apelado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="agravado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="embargado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="impugnado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="excepto",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="litisconsorte_passivo",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="agravado_recorrido",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        # ----------------------------------------------------
+        # Neutral / Auxiliary / Third Parties
+        # ----------------------------------------------------
+        PartyRole(
+            key="perito",
+            normalized_role="auxiliary",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="administrador",
+            normalized_role="auxiliary",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="leiloeiro",
+            normalized_role="auxiliary",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="amicus_curiae",
+            normalized_role="auxiliary",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="testemunha",
+            normalized_role="auxiliary",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="ministerio_publico",
+            normalized_role="fiscal",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="assistente",
+            normalized_role="third_party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="interessado",
+            normalized_role="third_party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="representante",
+            normalized_role="representative",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="curador",
+            normalized_role="representative",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="litisconsorte",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="espolio",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="autor_da_heranca",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="testador",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="interessado_querelante",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="herdeiro",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="legatario",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="crianca_ou_adolescente",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="entidade",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="outro",
+            normalized_role="unknown",
+            normalized_polarity="neutral"),
+        # ----------------------------------------------------
+        # Cross Appeals (Dual Role -> Mapped to Neutral)
+        # ----------------------------------------------------
+        PartyRole(
+            key="apelante_apelado",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="apelado_apelante",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="agravante_recorrido",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="agravado_recorrente",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="agravante_agravado",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="agravante_agravado_recorrido",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="agravante_agravado_recorrente",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="recorrente_recorrido",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="recorrido_recorrente",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="apelante_recorrido",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="apelado_recorrente",
+            normalized_role="party",
+            normalized_polarity="neutral"),
     ]
     """List of default mappings, it will be used according to the list order.
        reflecting the priority."""
 
-    ROLE_MAPPING_CUSTOM: list[PartyRoleEntry] | None = None
+    ROLE_MAPPING_CUSTOM: list[PartyRole] | None = None
     """When set, ``normalize_role`` uses this list instead of
     ``ROLE_MAPPING_DEFAULT``. The default list is not merged."""
 
-    def set_custom_mapping(self, mapping: list[dict[str, PartyRole]]
-                          ) -> list[PartyRoleEntry]:
+    def set_custom_mapping(self, mapping: list[PartyRole]
+                           ) -> list[PartyRole]:
         """Replace the mapping used by ``normalize_role``.
 
         Args:
-            mapping (list[dict[str, PartyRole]]):
-                List of ``PartyRoleEntry``-shaped dicts with slug keys.
+            mapping (list[PartyRole]):
+                Ordered role mappings. ``key`` must be a slug.
+                List order is the priority.
 
         Returns:
-            list[PartyRoleEntry]:
+            list[PartyRole]:
                 The mapping stored on ``ROLE_MAPPING_CUSTOM``.
 
         Raises:
             ValueError:
-                If an entry is not a dict, the key is not a slug, or the
-                value is not a ``PartyRole`` instance.
+                If an entry is not a ``PartyRole`` or its key
+                is not a slug.
         """
         for map_entry in mapping:
-            if type(map_entry) is not dict:
+            if type(map_entry) is not PartyRole:
                 raise ValueError(
-                    "The mapping must be a dictionary")
+                    "The mapping entry must be a PartyRole instance")
 
-            key = map_entry["key"]
-            key_slug = slugify(key, separator="_")
-            if key != key_slug:
+            key_slug = slugify(map_entry.key, separator="_")
+            if map_entry.key != key_slug:
                 raise ValueError(
                     "The key must be a slug. Got {key}.".format(
-                        key=key))
-
-            value = map_entry["value"]
-            if type(value) is not PartyRole:
-                raise ValueError(
-                    "The value must be a PartyRole instance")
+                        key=map_entry.key))
 
         # Set the custom mapping
         self.ROLE_MAPPING_CUSTOM = mapping
@@ -649,12 +551,11 @@ normalized_polarity="other"),
                 row_data["type_normalized"], separator="_")
             normalized_fields = None
             for entry in role_mapping:
-                if type_slugified == entry["key"]:
+                if type_slugified == entry.key:
                     normalized_fields = {
-                        "normalized_role":
-                            entry["value"].normalized_role,
+                        "normalized_role": entry.normalized_role,
                         "normalized_polarity":
-                            entry["value"].normalized_polarity}
+                            entry.normalized_polarity}
 
             # If no match, than set the role to other and warn to add to
             # mapping
