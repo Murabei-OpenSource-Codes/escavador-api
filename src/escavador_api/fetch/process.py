@@ -94,7 +94,7 @@ class FetchProcessMixin(FetchBaseMixin):
         process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/movimentacoes"\
             .format(process_number=process_number)
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def get_process_public_documents(self, process_number: str
                                      ) -> Iterator[dict]:
@@ -123,7 +123,7 @@ class FetchProcessMixin(FetchBaseMixin):
         process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/documentos-publicos"\
             .format(process_number=process_number)
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def get_process_documents(self, process_number: str
                               ) -> Iterator[dict]:
@@ -155,7 +155,7 @@ class FetchProcessMixin(FetchBaseMixin):
         process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/documentos-publicos"\
             .format(process_number=process_number)
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def get_process_all_documents(self, process_number: str
                                   ) -> Iterator[dict]:
@@ -188,7 +188,7 @@ class FetchProcessMixin(FetchBaseMixin):
         process_number = validate_process_number(process_number)
         url = "v2/processos/numero_cnj/{process_number}/autos"\
             .format(process_number=process_number)
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def request_process_public_documents(self, process_number: str) -> dict:
         """Request a public-document update for a CNJ number.
@@ -596,7 +596,7 @@ class FetchProcessMixin(FetchBaseMixin):
                 If an unexpected error occurs during the request.
         """
         url = "v2/monitoramentos/novos-processos"
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def get_monitoring_new_process(self, monitoring_id: int) -> dict:
         """Retrieve the details of a monitoring by ID.
@@ -664,7 +664,7 @@ class FetchProcessMixin(FetchBaseMixin):
         """
         url = "v2/monitoramentos/novos-processos/{monitoring_id}/resultados"\
             .format(monitoring_id=monitoring_id)
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def edit_monitoring_new_process(self, monitoring_id: int,
                                     keyword_variations: list[str] | None = None,
@@ -798,7 +798,7 @@ class FetchProcessMixin(FetchBaseMixin):
                 If an unexpected error occurs during the request.
         """
         url = "v2/monitoramentos/processos"
-        return self.fetch_paginated(url=url)
+        return list(self.fetch_paginated(url=url))
 
     def get_monitoring_existing_process(self, monitoring_id: int) -> dict:
         """Retrieve the details of a monitoring by ID.
