@@ -143,7 +143,12 @@ or `other`. A source type with no mapping becomes `other` / `other`.
 `escavador_api.singletons.transform_process_party_role` applies the
 default map inside `process_list`. `set_custom_mapping` replaces
 `TransformPartyRole.ROLE_MAPPING_DEFAULT` for later calls. The two
-lists are not merged.
+lists are not merged. When the same slug appears twice in a mapping
+list, the later entry wins.
+
+Invalid `numero_cnj` values in transform input raise
+`EscavadorAPIInvalidDocumentException` from `process_list` and
+`process`.
 
 ## API Reference
 
