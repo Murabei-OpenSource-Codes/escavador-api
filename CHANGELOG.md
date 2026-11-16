@@ -6,6 +6,21 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.23] - 2026-11-16
+
+### Changed
+- Package version tag only. Behavior matches `0.1.22`.
+
+## [0.1.22] - 2026-11-16
+
+### Changed
+- `get_process_updates`, `get_process_public_documents`,
+  `get_process_documents`, `get_process_all_documents`,
+  `list_monitoring_new_process`,
+  `get_results_monitoring_new_process`, and
+  `list_monitoring_existing_process` — return `list[dict]` after
+  paging (previously lazy generators from `fetch_paginated`)
+
 ## [0.1.21] - 2026-11-16
 
 ### Changed
