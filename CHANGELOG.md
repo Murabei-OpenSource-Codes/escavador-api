@@ -6,6 +6,32 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.20] - 2026-11-16
+
+### Added
+- `ROLE_MAPPING_DEFAULT` — lawyer / `neutral`: `advogado_procurador`,
+  `defensor`
+- `ROLE_MAPPING_DEFAULT` — active: `assistente_de_acusacao`, `consulente`,
+  `interpelante`, `consignante`, `corrigente`, `relatante`,
+  `representante_notificante`; `terceiro_depositante`
+  (`third_party` / `active`)
+- `ROLE_MAPPING_DEFAULT` — passive: `revel`, `ofensor`, `interpelado`,
+  `consignatario`, `corrigido`, `recorrido_agravado`, `rogado`,
+  `relatado`
+- `ROLE_MAPPING_DEFAULT` — `conciliador_juiz_leigo` (`judge` / `neutral`),
+  `fiel_depositario` (`auxiliary` / `neutral`),
+  `agravado_recorrente_recorrido` (`party` / `neutral`)
+
+### Changed
+- `ROLE_MAPPING_DEFAULT` and `set_custom_mapping` — when a slug appears
+  more than once, the later entry is used
+- `TransformPartyRole.normalize_role` — documents `Args`, `Returns`, and
+  `KeyError` when `type_normalized` is missing
+- `TransformProcessData.process_list` and `process` — document
+  `EscavadorAPIInvalidDocumentException` on invalid `numero_cnj`
+- `TransformCourtData.__init__` — docstring for stored process payload
+- `config.PROXY_URL` — typed as `str | None`
+
 ## [0.1.19] - 2026-11-15
 
 ### Changed

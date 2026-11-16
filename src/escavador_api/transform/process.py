@@ -67,6 +67,10 @@ class TransformProcessData:
                 ``process``: deduplicated rows per ``numero_cnj``.
                 ``process_by_court``: one row per court grade.
                 ``involved``: parties with role and first-court polarity.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If a payload ``numero_cnj`` is not 20 digits.
         """
         list_process_by_court = []
         list_process = []
@@ -125,6 +129,10 @@ class TransformProcessData:
                 ``TransformDeduplicateProcessByCourt``.
                 ``involved``: unique parties per grade (and
                 ``numero_cnj``) after ``aggregate_involved``.
+
+        Raises:
+            EscavadorAPIInvalidDocumentException:
+                If ``numero_cnj`` is not 20 digits.
         """
         list_transformed_sources = []
         list_involved_treated = []

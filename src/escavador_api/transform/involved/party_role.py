@@ -578,8 +578,10 @@ class TransformPartyRole:
             normalized_role="party",
             normalized_polarity="neutral"),
     ]
-    """List of default mappings, it will be used according to the list order.
-       reflecting the priority."""
+    """Default role mappings.
+
+    When a key is repeated, the later entry is the one applied.
+    """
 
     ROLE_MAPPING_CUSTOM: list[PartyRole] | None = None
     """When set, ``normalize_role`` uses this list instead of
@@ -591,8 +593,8 @@ class TransformPartyRole:
 
         Args:
             mapping (list[PartyRole]):
-                Ordered role mappings. ``key`` must be a slug.
-                List order is the priority.
+                Role mappings. ``key`` must be a slug.
+                A repeated key uses the later entry.
 
         Returns:
             list[PartyRole]:
@@ -624,6 +626,19 @@ class TransformPartyRole:
         Uses ``ROLE_MAPPING_CUSTOM`` when set; otherwise
         ``ROLE_MAPPING_DEFAULT``. Unmapped types become ``other`` / ``other``
         and log a warning.
+
+        Args:
+            involved (pd.DataFrame):
+                Involved rows. Each row needs ``type_normalized``.
+
+        Returns:
+            pd.DataFrame:
+                The same rows plus ``normalized_role`` and
+                ``normalized_polarity``.
+
+        Raises:
+            KeyError:
+                If a row has no ``type_normalized`` field.
         """
         # Custom mapping replaces the default; it is not merged with it.
         role_mapping = self.ROLE_MAPPING_CUSTOM or self.ROLE_MAPPING_DEFAULT

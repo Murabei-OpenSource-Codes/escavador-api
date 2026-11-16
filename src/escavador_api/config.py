@@ -41,7 +41,8 @@ REQUEST_TIMEOUT: int = _positive_int(
     "ESCAVADOR_API__REQUEST_TIMEOUT", 60)
 """Timeout for requests to the Escavador API."""
 
-PROXY_URL = os.environ.get("ESCAVADOR_API__PROXY_URL", None)
+PROXY_URL: str | None = os.environ.get(
+    "ESCAVADOR_API__PROXY_URL", None)
 """URL of the proxy to use for requests to the Escavador API."""
 
 MAX_PAGES: int = _positive_int(

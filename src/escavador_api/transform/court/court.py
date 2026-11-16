@@ -114,6 +114,12 @@ class TransformCourtData:
     }
 
     def __init__(self, process_data: dict):
+        """Store the process payload on the instance.
+
+        Args:
+            process_data (dict):
+                Process payload kept on ``self.process_data``.
+        """
         self.process_data = process_data
 
     @classmethod
