@@ -6,14 +6,20 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.21] - 2026-11-16
+
+### Changed
+- Package version tag only. Behavior matches `0.1.20` after README,
+  CHANGELOG, and public docstring updates in the prior commit.
+
 ## [0.1.20] - 2026-11-16
 
 ### Added
 - `ROLE_MAPPING_DEFAULT` — lawyer / `neutral`: `advogado_procurador`,
   `defensor`
 - `ROLE_MAPPING_DEFAULT` — active: `assistente_de_acusacao`, `consulente`,
-  `interpelante`, `consignante`, `corrigente`, `relatante`,
-  `representante_notificante`; `terceiro_depositante`
+  `interpelante`, `consignante`, `corrigente`, `relatante`
+  (`party` / `active`), `representante_notificante`; `terceiro_depositante`
   (`third_party` / `active`)
 - `ROLE_MAPPING_DEFAULT` — passive: `revel`, `ofensor`, `interpelado`,
   `consignatario`, `corrigido`, `recorrido_agravado`, `rogado`,
