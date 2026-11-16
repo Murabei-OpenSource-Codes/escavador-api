@@ -135,6 +135,16 @@ involved_df = tables["involved"]
 `process_by_court` (one row per court grade), and `involved` (parties
 with normalized roles and first-court polarity).
 
+`involved.normalized_role` is `judge`, `court`, `lawyer`, `party`,
+`third_party`, `auxiliary`, `fiscal`, `representative`, `unknown`,
+or `other`. `normalized_polarity` is `active`, `passive`, `neutral`,
+or `other`. A source type with no mapping becomes `other` / `other`.
+
+`escavador_api.singletons.transform_process_party_role` applies the
+default map inside `process_list`. `set_custom_mapping` replaces
+`TransformPartyRole.ROLE_MAPPING_DEFAULT` for later calls. The two
+lists are not merged.
+
 ## API Reference
 
 ### Initialization
