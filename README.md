@@ -91,10 +91,12 @@ process restarts.
 be positive integers. A missing or blank value keeps the default.
 Any other value raises `ValueError` at import.
 
-Paginated calls are `get_process_updates`,
+Paginated HTTP routes use `fetch_paginated` internally.
+`get_related_processes` returns `list[dict]` directly. These methods
+return `list[dict]` after all pages are fetched (subject to
+`ESCAVADOR_API__MAX_PAGES`): `get_process_updates`,
 `get_process_public_documents`, `get_process_documents`,
-`get_process_all_documents`,
-`get_related_processes`, `list_monitoring_new_process`,
+`get_process_all_documents`, `list_monitoring_new_process`,
 `get_results_monitoring_new_process`, and
 `list_monitoring_existing_process`.
 
@@ -191,26 +193,26 @@ Retrieve basic process information. **(paid)**
   optional)
 
 ```python
-get_process_updates(process_number: str)
+get_process_updates(process_number: str) -> list[dict]
 ```
-Yields one dictionary per process update. **(paid)**
+Returns one dictionary per process update. **(paid)**
 
 ```python
-get_process_public_documents(process_number: str)
+get_process_public_documents(process_number: str) -> list[dict]
 ```
-Yields one dictionary per public document. **(paid)**
+Returns one dictionary per public document. **(paid)**
 
 ```python
-get_process_documents(process_number: str)
+get_process_documents(process_number: str) -> list[dict]
 ```
-Yields one dictionary per public document from
+Returns one dictionary per public document from
 `GET .../documentos-publicos`. Each item carries `key` and
 `links.api` when the API sends them. **(paid)**
 
 ```python
-get_process_all_documents(process_number: str)
+get_process_all_documents(process_number: str) -> list[dict]
 ```
-Yields one dictionary per document, including restricted documents
+Returns one dictionary per document, including restricted documents
 when the caller is authorized. **(paid)**
 
 #### Process Updates
@@ -311,9 +313,9 @@ create_monitoring_new_process(
 Create monitoring for new processes matching criteria.
 
 ```python
-list_monitoring_new_process()
+list_monitoring_new_process() -> list[dict]
 ```
-Yields one dictionary per new-process monitoring.
+Returns one dictionary per new-process monitoring.
 
 ```python
 get_monitoring_new_process(monitoring_id: int) -> dict
@@ -336,9 +338,9 @@ delete_monitoring_new_process(monitoring_id: int) -> bool
 Delete a monitoring.
 
 ```python
-get_results_monitoring_new_process(monitoring_id: int)
+get_results_monitoring_new_process(monitoring_id: int) -> list[dict]
 ```
-Yields one dictionary per process found by the monitoring.
+Returns one dictionary per process found by the monitoring.
 
 #### Existing Process Monitoring
 
@@ -352,9 +354,9 @@ create_monitoring_existing_process(
 Monitor updates to an existing process.
 
 ```python
-list_monitoring_existing_process()
+list_monitoring_existing_process() -> list[dict]
 ```
-Yields one dictionary per existing-process monitoring.
+Returns one dictionary per existing-process monitoring.
 
 ```python
 get_monitoring_existing_process(monitoring_id: int) -> dict
