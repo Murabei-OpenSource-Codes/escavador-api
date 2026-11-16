@@ -6,6 +6,53 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.19] - 2026-11-15
+
+### Changed
+- `ROLE_MAPPING_DEFAULT` entries are `PartyRole` values (`key`,
+  `normalized_role`, `normalized_polarity`), not dicts
+- Default `normalized_role` values are `judge`, `court`, `lawyer`,
+  `party`, `third_party`, `auxiliary`, `fiscal`, `representative`,
+  and `unknown`. Unmapped types stay `other` / `other`
+- Court offices `juizo_deprecante`, `juizo_recorrente`,
+  `juizo_deprecado`, `deprecado`, and `remetente` map to `court` /
+  `neutral` (previously `judge` / `neutral`)
+- `advogado`, `defensor_publico`, `procurador`,
+  `promotor_de_justica`, and `procurador_de_justica` map to
+  `lawyer` / `neutral`
+- `ministerio_publico` maps to `fiscal` / `neutral` (previously
+  `party` / `active`)
+- `assistente` and `interessado` map to `third_party` / `neutral`
+- `representante` and `curador` map to `representative` / `neutral`
+- `vitima` maps to `party` / `active` (previously `party` /
+  `passive`). `liquidante` maps to `auxiliary` / `active`
+  (previously `auxiliary` / `neutral`)
+- `outro` maps to `unknown` / `neutral` (previously `other` /
+  `other`)
+- Dual-role appeal slugs, plus `autor_da_heranca`, `espolio`,
+  `interessado_querelante`, `legatario`, `litisconsorte`, and
+  `testador`, stay `party` and use polarity `neutral` (previously
+  `other`)
+
+### Added
+- `ROLE_MAPPING_DEFAULT` — `desembargador` (`judge` / `neutral`)
+- `ROLE_MAPPING_DEFAULT` — active `party`: `agravante_recorrente`,
+  `cessionario`, `confrontante`, `credor`, `inventariante`,
+  `opoente`, `promovente`, `querelante`
+- `ROLE_MAPPING_DEFAULT` — `arrematante` (`third_party` / `active`)
+- `ROLE_MAPPING_DEFAULT` — passive `party`: `agravado_recorrido`,
+  `autor_do_fato`, `devedor`, `inventariado`, `oposto`,
+  `promovido`, `querelado`, `reconvido`
+- `ROLE_MAPPING_DEFAULT` — neutral `party`: `agravado_recorrente`,
+  `agravante_agravado`, `agravante_agravado_recorrente`,
+  `agravante_agravado_recorrido`, `agravante_recorrido`,
+  `crianca_ou_adolescente`, `entidade`, `herdeiro`
+
+### Removed
+- `PartyRoleEntry` — dict wrapper around `PartyRole`
+- `averiguado` from `ROLE_MAPPING_DEFAULT`. That source type now
+  falls through to `other` / `other`
+
 ## [0.1.18] - 2026-11-15
 
 ### Added

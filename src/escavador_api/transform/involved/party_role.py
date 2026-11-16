@@ -35,6 +35,10 @@ class TransformPartyRole:
             normalized_role="judge",
             normalized_polarity="neutral"),
         PartyRole(
+            key="conciliador_juiz_leigo",
+            normalized_role="judge",
+            normalized_polarity="neutral"),
+        PartyRole(
             key="juizo_deprecante",
             normalized_role="court",
             normalized_polarity="neutral"),
@@ -66,7 +70,15 @@ class TransformPartyRole:
             normalized_role="lawyer",
             normalized_polarity="neutral"),
         PartyRole(
+            key="defensor",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        PartyRole(
             key="procurador",
+            normalized_role="lawyer",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="advogado_procurador",
             normalized_role="lawyer",
             normalized_polarity="neutral"),
         PartyRole(
@@ -209,7 +221,39 @@ class TransformPartyRole:
             normalized_role="third_party",
             normalized_polarity="active"),
         PartyRole(
+            key="terceiro_depositante",
+            normalized_role="third_party",
+            normalized_polarity="active"),
+        PartyRole(
             key="vitima",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="consulente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="assistente_de_acusacao",
+            normalized_role="third_party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="representante_notificante",
+            normalized_role="representative",
+            normalized_polarity="active"),
+        PartyRole(
+            key="interpelante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="consignante",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="corrigente",
+            normalized_role="party",
+            normalized_polarity="active"),
+        PartyRole(
+            key="relatante",
             normalized_role="party",
             normalized_polarity="active"),
         # ----------------------------------------------------
@@ -217,6 +261,14 @@ class TransformPartyRole:
         # ----------------------------------------------------
         PartyRole(
             key="reu",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="relatado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="revel",
             normalized_role="party",
             normalized_polarity="passive"),
         PartyRole(
@@ -268,6 +320,14 @@ class TransformPartyRole:
             normalized_role="party",
             normalized_polarity="passive"),
         PartyRole(
+            key="rogado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="interpelado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
             key="falido",
             normalized_role="party",
             normalized_polarity="passive"),
@@ -289,6 +349,10 @@ class TransformPartyRole:
             normalized_polarity="passive"),
         PartyRole(
             key="autor_do_fato",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="ofensor",
             normalized_role="party",
             normalized_polarity="passive"),
         PartyRole(
@@ -363,6 +427,18 @@ class TransformPartyRole:
             key="agravado_recorrido",
             normalized_role="party",
             normalized_polarity="passive"),
+        PartyRole(
+            key="recorrido_agravado",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="consignatario",
+            normalized_role="party",
+            normalized_polarity="passive"),
+        PartyRole(
+            key="corrigido",
+            normalized_role="party",
+            normalized_polarity="passive"),
         # ----------------------------------------------------
         # Neutral / Auxiliary / Third Parties
         # ----------------------------------------------------
@@ -372,6 +448,10 @@ class TransformPartyRole:
             normalized_polarity="neutral"),
         PartyRole(
             key="administrador",
+            normalized_role="auxiliary",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="fiel_depositario",
             normalized_role="auxiliary",
             normalized_polarity="neutral"),
         PartyRole(
@@ -463,6 +543,10 @@ class TransformPartyRole:
             normalized_polarity="neutral"),
         PartyRole(
             key="agravado_recorrente",
+            normalized_role="party",
+            normalized_polarity="neutral"),
+        PartyRole(
+            key="agravado_recorrente_recorrido",
             normalized_role="party",
             normalized_polarity="neutral"),
         PartyRole(
