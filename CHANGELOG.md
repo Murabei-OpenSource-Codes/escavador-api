@@ -6,6 +6,11 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.24] - 2026-11-16
+
+### Changed
+- Package version tag only. Behavior matches `0.1.23`.
+
 ## [0.1.23] - 2026-11-16
 
 ### Changed
