@@ -1,10 +1,12 @@
 """Escavador API."""
 from escavador_api.fetch import (
-    FetchGeneralMixin, FetchProcessMixin, FetchRelatedProcessMixin)
+    FetchGeneralMixin, FetchProcessMixin, FetchRelatedProcessMixin,
+    FetchUpdatesAndDocumentsMixin, FetchOnDemandMixin)
 
 
 class EscavadorAPI(FetchGeneralMixin, FetchProcessMixin,
-                   FetchRelatedProcessMixin):
+                   FetchRelatedProcessMixin, FetchUpdatesAndDocumentsMixin,
+                   FetchOnDemandMixin):
     """Main class to interact with Escavador endpoints."""
 
     def __init__(self, escavador_auth_token: str):

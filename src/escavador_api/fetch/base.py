@@ -2,8 +2,8 @@
 import requests
 from loguru import logger
 from urllib.parse import urljoin
-from escavador_api.fetch.misc import (
-    RETRY_ERRORS, retry_on_network_errors)
+from tenacity import (
+    retry, retry_if_exception_type, stop_after_attempt, wait_fixed)
 from escavador_api.exceptions import (
     EscavadorAPIProblemAPIException, EscavadorAPIUnmappedErrorException,
     EscavadorAPIAuthenticationError)
@@ -11,6 +11,18 @@ from typing import Any, Iterator
 
 # Local imports
 from escavador_api.config import MAX_PAGES, PROXY_URL, REQUEST_TIMEOUT
+
+
+RETRY_ERRORS = (requests.ConnectionError, requests.Timeout)
+"""Tuple of errors to retry on."""
+
+
+# Five attempts, three seconds apart, on connection errors and timeouts.
+_RETRY_ON_NETWORK = retry(
+    retry=retry_if_exception_type(RETRY_ERRORS),
+    stop=stop_after_attempt(5),
+    wait=wait_fixed(3),
+    reraise=True)
 
 
 class FetchBaseMixin:
@@ -53,7 +65,27 @@ class FetchBaseMixin:
             "X-Requested-With": "XMLHttpRequest"}
         self.session.headers.update(self.headers)
 
-    @retry_on_network_errors
+    @staticmethod
+    def _response_api_message(response: requests.Response) -> str:
+        """Read an error message from an HTTP error response body.
+
+        Binary and empty bodies skip JSON parsing.
+        """
+        try:
+            body = response.json()
+            if isinstance(body, dict):
+                message = body.get("message")
+                if message:
+                    return str(message)
+        except ValueError:
+            pass
+        text = (response.text or "").strip()
+        if text:
+            return text[:500]
+        return "HTTP {status_code}".format(
+            status_code=response.status_code)
+
+    @_RETRY_ON_NETWORK
     def get(self, url: str, params: dict | None = None) -> Any:
         """Aux fuction to allow retry on get requests.
 
@@ -83,14 +115,23 @@ class FetchBaseMixin:
                 url=url_with_base, params=params,
                 timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
-            return response.json()
+            try:
+                return response.json()
+            except ValueError as e:
+                raise EscavadorAPIProblemAPIException(
+                    message="Response is not valid JSON",
+                    payload={"error": str(e)})
 
         except requests.HTTPError as e:
-            msg = response.json().get("message")
+            msg = self._response_api_message(response)
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={
+                    "status_code": response.status_code,
+                    "error": str(e)})
         except RETRY_ERRORS:
+            raise
+        except EscavadorAPIProblemAPIException:
             raise
         except Exception as e:
             msg = "Unmapped error"
@@ -98,7 +139,7 @@ class FetchBaseMixin:
                 message=msg,
                 payload={"error": str(e)})
 
-    @retry_on_network_errors
+    @_RETRY_ON_NETWORK
     def get_binary(self, url: str, params: dict | None = None) -> bytes:
         """GET request returning raw response body.
 
@@ -131,11 +172,15 @@ class FetchBaseMixin:
             return response.content
 
         except requests.HTTPError as e:
-            msg = response.json().get("message")
+            msg = self._response_api_message(response)
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={
+                    "status_code": response.status_code,
+                    "error": str(e)})
         except RETRY_ERRORS:
+            raise
+        except EscavadorAPIProblemAPIException:
             raise
         except Exception as e:
             msg = "Unmapped error"
@@ -143,7 +188,7 @@ class FetchBaseMixin:
                 message=msg,
                 payload={"error": str(e)})
 
-    @retry_on_network_errors
+    @_RETRY_ON_NETWORK
     def post(self, url: str, params: dict | None = None,
              data: Any | None = None, json: Any | None = None) -> Any:
         """Send a POST request, retrying network failures.
@@ -178,14 +223,23 @@ class FetchBaseMixin:
                 url=url_with_base, params=params,
                 data=data, json=json, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
-            return response.json()
+            try:
+                return response.json()
+            except ValueError as e:
+                raise EscavadorAPIProblemAPIException(
+                    message="Response is not valid JSON",
+                    payload={"error": str(e)})
 
         except requests.HTTPError as e:
-            msg = response.json().get("message")
+            msg = self._response_api_message(response)
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={
+                    "status_code": response.status_code,
+                    "error": str(e)})
         except RETRY_ERRORS:
+            raise
+        except EscavadorAPIProblemAPIException:
             raise
         except Exception as e:
             msg = "Unmapped error"
@@ -193,6 +247,7 @@ class FetchBaseMixin:
                 message=msg,
                 payload={"error": str(e)})
 
+    @_RETRY_ON_NETWORK
     def delete(self, url: str) -> Any:
         """Send a DELETE request.
 
@@ -224,14 +279,23 @@ class FetchBaseMixin:
 
             # If status 204 is not indicated then return the data
             else:
-                return response.json()
+                try:
+                    return response.json()
+                except ValueError as e:
+                    raise EscavadorAPIProblemAPIException(
+                        message="Response is not valid JSON",
+                        payload={"error": str(e)})
 
         except requests.HTTPError as e:
-            msg = response.json().get("message")
+            msg = self._response_api_message(response)
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={
+                    "status_code": response.status_code,
+                    "error": str(e)})
         except RETRY_ERRORS:
+            raise
+        except EscavadorAPIProblemAPIException:
             raise
         except Exception as e:
             msg = "Unmapped error"
@@ -239,6 +303,7 @@ class FetchBaseMixin:
                 message=msg,
                 payload={"error": str(e)})
 
+    @_RETRY_ON_NETWORK
     def patch(self, url: str, data: Any) -> Any:
         """Send a PATCH request.
 
@@ -272,14 +337,23 @@ class FetchBaseMixin:
 
             # If status 204 is not indicated then return the data
             else:
-                return response.json()
+                try:
+                    return response.json()
+                except ValueError as e:
+                    raise EscavadorAPIProblemAPIException(
+                        message="Response is not valid JSON",
+                        payload={"error": str(e)})
 
         except requests.HTTPError as e:
-            msg = response.json().get("message")
+            msg = self._response_api_message(response)
             raise EscavadorAPIProblemAPIException(
                 message=msg,
-                payload={"error": str(e)})
+                payload={
+                    "status_code": response.status_code,
+                    "error": str(e)})
         except RETRY_ERRORS:
+            raise
+        except EscavadorAPIProblemAPIException:
             raise
         except Exception as e:
             msg = "Unmapped error"

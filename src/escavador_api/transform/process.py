@@ -100,15 +100,7 @@ class TransformProcessData:
                 .loc[:, cls.PROCESS_COLUMNS]
 
         # Concatenate all involved parties
-        all_involved = None
-        if len(list_involved) == 0:
-            all_involved = pd.DataFrame(columns=cls.INVOLVED_COLUMNS)\
-                .pipe(transform_process_party_role.normalize_role)\
-                .pipe(TransformFirstCourtPolarity.transform)
-        else:
-            all_involved = pd.concat(list_involved)\
-                .pipe(transform_process_party_role.normalize_role)\
-                .pipe(TransformFirstCourtPolarity.transform)
+        all_involved = pd.concat(list_involved)
         return {
             "process": all_process,
             "process_by_court": all_process_by_court,
@@ -160,7 +152,9 @@ class TransformProcessData:
             columns=['source_id'] + cls.INVOLVED_COLUMNS)\
             .pipe(
                 cls.aggregate_involved,
-                numero_cnj=process_data.get('numero_cnj'))
+                numero_cnj=process_data.get('numero_cnj'))\
+            .pipe(transform_process_party_role.normalize_role)\
+            .pipe(TransformFirstCourtPolarity.transform)
         return {
             'involved': pd_involved_treated,
             'process_by_court': pd_grade_aggregated,
