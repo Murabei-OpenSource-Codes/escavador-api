@@ -22,6 +22,14 @@ class PartyRole:
 class TransformPartyRole:
     """Transform the party role on the process."""
 
+    NORMALIZED_COLUMNS: list[str] = [
+       'numero_cnj', 'court_grade', 'type_person', 'document_number',
+       'invalid_document', 'type_normalized', 'polarity', 'name',
+       'number_of_processes', 'oabs', 'court_name', 'court_acronym',
+       'court_category', 'court_state', 'normalized_role',
+       'normalized_polarity']
+    """Columns to be normalized."""
+
     ROLE_MAPPING_DEFAULT: list[PartyRole] = [
         # ----------------------------------------------------
         # Judge & Court Offices (Neutral)
@@ -674,4 +682,4 @@ class TransformPartyRole:
             list_of_entries.append(row_data)
 
         # Return the DataFrame
-        return pd.DataFrame(list_of_entries)
+        return pd.DataFrame(list_of_entries, columns=self.NORMALIZED_COLUMNS)

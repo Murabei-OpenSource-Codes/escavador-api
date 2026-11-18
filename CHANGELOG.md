@@ -6,6 +6,46 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.25] - 2026-11-18
+
+### Added
+- `TransformUpdateData.merge_documents` — maps `andamento` to
+  `update` and `publicacao` to `publication`, then left-joins
+  `file_path`
+- `get_documents_public` — pages public documents. `download_files`
+  and `save_files` must both be true (saved rows include
+  `file_path`) or both false (returns `[]`)
+- `download_file` — one document as bytes, or a path when
+  `save_file` is true
+
+### Changed
+- `get_documents_all` replaces `get_process_all_documents`
+  (`GET .../autos`, still `list[dict]`)
+- `get_process_updates` moved to `FetchUpdatesAndDocumentsMixin`.
+  `EscavadorAPI` still exposes it
+- `request_process_public_documents`,
+  `request_process_update_public`, `request_process_update_full`,
+  and `get_process_update_status` moved from `FetchProcessMixin`
+  to `FetchOnDemandMixin`. `EscavadorAPI` still exposes them
+- `delete` and `patch` retry connection errors and timeouts
+  (5 attempts, 3 seconds apart), same as `get` and `post`
+- HTTP error payloads include `status_code`. A non-JSON body
+  raises `EscavadorAPIProblemAPIException`
+- `TransformProcessData.process` applies role normalization and
+  first-court polarity per process. `process_list` concatenates
+  those frames
+- `TransformProcessData.process_list` with an empty process list
+  raises `ValueError` from `pandas.concat` on `involved`
+- `TransformPartyRole.normalize_role` fills `NORMALIZED_COLUMNS`
+  when the input has no rows
+
+### Removed
+- `get_process_public_documents` and `get_process_documents`
+  (both read `GET .../documentos-publicos`)
+- `download_process_file` — no PDF header check. Use
+  `download_file`
+- `escavador_api.fetch.misc.retry_on_network_errors`
+
 ## [0.1.24] - 2026-11-16
 
 ### Changed

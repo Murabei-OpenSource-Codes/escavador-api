@@ -75,4 +75,5 @@ class TransformFirstCourtPolarity:
             raise ValueError(
                 "The number of rows in the involved data and the "
                 "involved data with the first court polarity do not match")
-        return involved_with_first_court_polarity.loc[:, cls.OUTPUT_COLUMNS]
+        return involved_with_first_court_polarity\
+            .loc[:, cls.OUTPUT_COLUMNS]
