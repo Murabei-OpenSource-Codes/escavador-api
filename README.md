@@ -22,7 +22,8 @@ workers and internal tools that need structured process data.
 
 ### Scope
 In scope: Escavador REST client behavior (requests, retries, error
-mapping) and optional pandas transforms for process and involved data.
+mapping) and optional pandas transforms for process, involved, and
+movement data.
 Out of scope: Escavador account management, credit purchase, and
 downstream storage or ETL orchestration beyond this library.
 
@@ -40,13 +41,16 @@ downstream storage or ETL orchestration beyond this library.
   by CPF, CNPJ, or name
 - **Credit Management**: Check API usage credits and limits
 - **Court Data Refresh**: Request fresh data updates from court sources
-- **Retry Logic**: GET and POST retry connection errors and timeouts
-  (5 attempts, 3 seconds apart)
+- **Retry Logic**: GET, POST, DELETE, and PATCH retry connection
+  errors and timeouts (5 attempts, 3 seconds apart). `get_binary`
+  uses the same retry
 - **Pagination cap**: Paginated calls fetch the first page, then at
   most `ESCAVADOR_API__MAX_PAGES` further pages (default 200)
 - **Process transforms**: `TransformProcessData` turns API process
   JSON into `process`, `process_by_court`, and `involved` DataFrames
   (court UF, role normalization, per-CNJ deduplication)
+- **Movement transforms**: `TransformUpdateData` maps movement
+  `tipo` to `update` or `publication` and can attach `file_path`
 
 ## Installation
 
@@ -95,10 +99,11 @@ Paginated HTTP routes use `fetch_paginated` internally.
 `get_related_processes` returns `list[dict]` directly. These methods
 return `list[dict]` after all pages are fetched (subject to
 `ESCAVADOR_API__MAX_PAGES`): `get_process_updates`,
-`get_process_public_documents`, `get_process_documents`,
-`get_process_all_documents`, `list_monitoring_new_process`,
+`get_documents_all`, `list_monitoring_new_process`,
 `get_results_monitoring_new_process`, and
-`list_monitoring_existing_process`.
+`list_monitoring_existing_process`. `get_documents_public` pages
+the public-document route, then returns rows only when
+`download_files` and `save_files` are both true.
 
 The auth token is an argument of `EscavadorAPI`. The library does not
 read it from the environment.
@@ -143,7 +148,7 @@ or `other`. `normalized_polarity` is `active`, `passive`, `neutral`,
 or `other`. A source type with no mapping becomes `other` / `other`.
 
 `escavador_api.singletons.transform_process_party_role` applies the
-default map inside `process_list`. `set_custom_mapping` replaces
+default map inside `process`. `set_custom_mapping` replaces
 `TransformPartyRole.ROLE_MAPPING_DEFAULT` for later calls. The two
 lists are not merged. When the same slug appears twice in a mapping
 list, the later entry wins.
@@ -151,6 +156,21 @@ list, the later entry wins.
 Invalid `numero_cnj` values in transform input raise
 `EscavadorAPIInvalidDocumentException` from `process_list` and
 `process`.
+
+### Movement transforms
+
+```python
+from escavador_api.transform import TransformUpdateData
+
+frame = TransformUpdateData.merge_documents(
+    updates=updates, documents=documents)
+```
+
+`updates` is the list from `get_process_updates`. `documents` is
+the list from `get_documents_public` when files were saved.
+`andamento` becomes `update` and `publicacao` becomes
+`publication`. Any other `tipo` is skipped. `file_path` is null
+when no saved document points at that movement.
 
 ## API Reference
 
@@ -198,22 +218,22 @@ get_process_updates(process_number: str) -> list[dict]
 Returns one dictionary per process update. **(paid)**
 
 ```python
-get_process_public_documents(process_number: str) -> list[dict]
+get_documents_public(
+    process_number: str,
+    download_files: bool = False,
+    folder_path: str = None,
+    save_files: bool = False,
+) -> list[dict]
 ```
-Returns one dictionary per public document. **(paid)**
+Pages `GET .../documentos-publicos`. **(paid)** `download_files`
+and `save_files` must both be true or both be false. Both true
+downloads each file and sets `file_path`. Both false returns `[]`.
 
 ```python
-get_process_documents(process_number: str) -> list[dict]
+get_documents_all(process_number: str) -> list[dict]
 ```
-Returns one dictionary per public document from
-`GET .../documentos-publicos`. Each item carries `key` and
-`links.api` when the API sends them. **(paid)**
-
-```python
-get_process_all_documents(process_number: str) -> list[dict]
-```
-Returns one dictionary per document, including restricted documents
-when the caller is authorized. **(paid)**
+Returns one dictionary per document from `GET .../autos`, including
+restricted documents when the caller is authorized. **(paid)**
 
 #### Process Updates
 
@@ -247,9 +267,19 @@ Check the status of an update request. **(paid)**
 #### Document Downloads
 
 ```python
-download_process_file(process_number: str, file_key: str) -> bytes
+download_file(
+    process_number: str,
+    file_key: str,
+    folder_path: str = None,
+    file_name: str = None,
+    save_file: bool = False,
+) -> bytes | str
 ```
-Download a specific document as PDF bytes. **(paid)**
+Downloads one document from `GET .../documentos/{file_key}`.
+**(paid)** When `save_file` is false, `folder_path` and `file_name`
+are required and the method returns the bytes. When `save_file` is
+true, a missing directory defaults to `./` and a missing name
+defaults to `{file_key}.pdf`. The return value is the joined path.
 
 #### AI Summaries
 
@@ -379,14 +409,15 @@ The library provides specific exception types:
 - `EscavadorAPIInvalidParametersException`: A call is missing a required
   argument, such as both `cpf_cnpj` and `nome`.
 - `EscavadorAPIProblemAPIException`: The Escavador API returned an HTTP
-  error, or a monitoring call failed local checks.
+  error, or a monitoring call failed local checks. HTTP payloads
+  include `status_code`. A body that is not JSON raises this error.
 - `EscavadorAPIUnmappedErrorException`: An unexpected error during a
   request.
 
 ## Retry Logic
 
-`get`, `get_binary`, and `post` retry network failures. `delete` and
-`patch` do not.
+`get`, `get_binary`, `post`, `delete`, and `patch` retry network
+failures.
 
 - **Attempts**: 5 (`stop_after_attempt`)
 - **Delay**: 3 seconds between attempts
