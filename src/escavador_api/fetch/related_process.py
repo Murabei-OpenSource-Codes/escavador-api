@@ -78,12 +78,21 @@ class FetchRelatedProcessMixin(FetchBaseMixin):
                 Process records returned by the Escavador API.
 
         Raises:
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
             EscavadorAPIInvalidParametersException:
-                If both cpf_cnpj and nome are missing.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If both cpf_cnpj and nome are missing, or HTTP 422,
+                or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/envolvido/processos"
 

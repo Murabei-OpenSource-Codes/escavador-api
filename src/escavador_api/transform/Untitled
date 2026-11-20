@@ -1,0 +1,29 @@
+"""Test for the Working Class."""
+import os
+import unittest
+import requests
+from neo4j import GraphDatabase
+from slugify import slugify
+from pumpwood_communication.microservices import PumpWoodMicroService
+from pumpwood_miscellaneous.rabbitmq import PumpWoodRabbitMQ
+from settings.local_settings import CONFIG
+from worker import WorkingClass
+
+
+##########################
+# RabbitMQ configuration #
+username = os.getenv('RABBITMQ_USERNAME')
+password = os.getenv('RABBITMQ_PASSWORD')
+host = os.getenv('RABBITMQ_HOST')
+port = int(os.getenv('RABBITMQ_PORT'))
+rabbitmq_api = PumpWoodRabbitMQ(
+    username=username, password=password,
+    host=host, port=port)
+
+
+microservice = PumpWoodMicroService(
+    name="test", server_url="http://0.0.0.0:8080/")
+auth_header = {
+    'Authorization':
+        'Token 16abbdc1c4de876d0f013ed072b2164518'
+        '7e02cd7c599e48ec5858033f0241f9'}

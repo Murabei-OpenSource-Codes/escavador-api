@@ -12,11 +12,12 @@ Entries start at `0.1.10`. Older tags remain in git only.
 - `TransformUpdateData.merge_documents` — maps `andamento` to
   `update` and `publicacao` to `publication`, then left-joins
   `file_path`
-- `get_documents_public` — pages public documents. `download_files`
-  and `save_files` must both be true (saved rows include
-  `file_path`) or both false (returns `[]`)
-- `download_file` — one document as bytes, or a path when
-  `save_file` is true
+- `get_documents_public` — pages public documents. Both flags
+  false returns those rows. Download without save sets
+  `file_content`. Both true sets `file_path`
+- `download_file` — bytes when `save_file` is false. A path when
+  it is true, defaulting a missing folder to `./` and a missing
+  name to `{file_key}.pdf`
 
 ### Changed
 - `get_documents_all` replaces `get_process_all_documents`
@@ -29,13 +30,23 @@ Entries start at `0.1.10`. Older tags remain in git only.
   to `FetchOnDemandMixin`. `EscavadorAPI` still exposes them
 - `delete` and `patch` retry connection errors and timeouts
   (5 attempts, 3 seconds apart), same as `get` and `post`
-- HTTP error payloads include `status_code`. A non-JSON body
-  raises `EscavadorAPIProblemAPIException`
+- HTTP error payloads include `request_error_code`. Status
+  401, 402, 404, 422, and 429 raise their own exception
+  classes. `NUMERO_CNJ_INVALIDO` stays on
+  `EscavadorAPIInvalidDocumentException`
 - `TransformProcessData.process` applies role normalization and
   first-court polarity per process. `process_list` concatenates
   those frames
 - `TransformProcessData.process_list` with an empty process list
-  raises `ValueError` from `pandas.concat` on `involved`
+  returns empty frames. `involved` uses the first-court polarity
+  columns
+- `download_file` quotes `file_key` in the URL and rejects a
+  `file_name` that is not a basename
+- `get`, `get_binary`, `post`, `delete`, and `patch` re-raise the
+  original error when it happens before a response exists
+- `EscavadorAPIException` uses a new payload dict when none is passed
+- `list_monitoring_new_process`, `list_monitoring_existing_process`,
+  and `get_results_monitoring_new_process` are typed `list[dict]`
 - `TransformPartyRole.normalize_role` fills `NORMALIZED_COLUMNS`
   when the input has no rows
 

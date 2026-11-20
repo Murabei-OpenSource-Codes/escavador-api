@@ -1,5 +1,5 @@
 """Module to handle processes requests."""
-from typing import Any, Iterator, Literal, TypedDict
+from typing import Literal, TypedDict
 from escavador_api.exceptions import EscavadorAPIProblemAPIException
 
 
@@ -29,10 +29,20 @@ class FetchProcessMixin(FetchBaseMixin):
                 the courts available for search.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/tribunais"
         return self.get(url=url)
@@ -54,11 +64,20 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -84,11 +103,20 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -113,11 +141,20 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -143,11 +180,20 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -159,7 +205,7 @@ class FetchProcessMixin(FetchBaseMixin):
     def create_monitoring_new_process(self, keyword: str,
                                       keyword_variations: list[str] | None = None, # NOQA
                                       aux_keywords: list[KeywordDict] | None = None,  # NOQA
-                                      courts: list[str] | None = None) -> Any:
+                                      courts: list[str] | None = None) -> dict:
         """Create monitoring to search for new processes.
 
         The monitoring will search for the keyword in newly created processes
@@ -190,11 +236,22 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIProblemAPIException:
-                If keyword_variations has more than two items, if
-                aux_keywords is invalid, or if the Escavador API
-                returns an HTTP error.
+                If keyword_variations has more than two items, or
+                aux_keywords is invalid.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/novos-processos"
 
@@ -230,19 +287,29 @@ class FetchProcessMixin(FetchBaseMixin):
 
         return self.post(url=url, json=data)
 
-    def list_monitoring_new_process(self) -> Iterator[dict]:
+    def list_monitoring_new_process(self) -> list[dict]:
         """Retrieve a list of new process monitorings created.
 
         Returns:
-            Generator:
-                Dictionaries representing active monitorings for new
-                processes. One item is yielded per API result.
+            list[dict]:
+                Active monitorings for new processes. One dictionary
+                per API result.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/novos-processos"
         return list(self.fetch_paginated(url=url))
@@ -260,10 +327,20 @@ class FetchProcessMixin(FetchBaseMixin):
                 specified monitoring.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/novos-processos/{monitoring_id}"\
             .format(monitoring_id=monitoring_id)
@@ -283,17 +360,27 @@ class FetchProcessMixin(FetchBaseMixin):
                 Parsed JSON otherwise.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/novos-processos/{monitoring_id}"\
             .format(monitoring_id=monitoring_id)
         return self.delete(url=url)
 
     def get_results_monitoring_new_process(self, monitoring_id: int
-                                           ) -> Iterator[dict]:
+                                           ) -> list[dict]:
         """Retrieve the results of a new process monitoring.
 
         Args:
@@ -301,15 +388,25 @@ class FetchProcessMixin(FetchBaseMixin):
                 New process monitoring ID.
 
         Returns:
-            Generator:
-                Dictionaries representing new processes found by the
-                monitoring. One item is yielded per API result.
+            list[dict]:
+                New processes found by the monitoring. One dictionary
+                per API result.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/novos-processos/{monitoring_id}/resultados"\
             .format(monitoring_id=monitoring_id)
@@ -318,7 +415,7 @@ class FetchProcessMixin(FetchBaseMixin):
     def edit_monitoring_new_process(self, monitoring_id: int,
                                     keyword_variations: list[str] | None = None,
                                     aux_keywords: list[KeywordDict] | None = None, # NOQA
-                                    courts: list[str] | None = None) -> Any:
+                                    courts: list[str] | None = None) -> dict:
         """Edit previously created monitoring. Keyword cannot be edited.
 
         Args:
@@ -350,11 +447,22 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIProblemAPIException:
-                If keyword_variations has more than two items, if
-                aux_keywords is invalid, or if the Escavador API
-                returns an HTTP error.
+                If keyword_variations has more than two items, or
+                aux_keywords is invalid.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/novos-processos/{monitoring_id}"\
             .format(monitoring_id=monitoring_id)
@@ -390,7 +498,8 @@ class FetchProcessMixin(FetchBaseMixin):
 
     def create_monitoring_existing_process(self, process_number: str,
                                            court: str | None = None,
-                                           frequency: str | None = None) -> Any:
+                                           frequency: str | None = None
+                                           ) -> dict:
         """Create monitoring to search for new updates on an existing process.
 
         The monitoring will search and return new publications and updates
@@ -414,11 +523,20 @@ class FetchProcessMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -432,19 +550,29 @@ class FetchProcessMixin(FetchBaseMixin):
             data['frequencia'] = frequency
         return self.post(url=url, json=data)
 
-    def list_monitoring_existing_process(self) -> Iterator[dict]:
+    def list_monitoring_existing_process(self) -> list[dict]:
         """Retrieve a list of existing process monitorings created.
 
         Returns:
-            Generator:
-                Dictionaries representing active monitorings for
-                existing processes. One item is yielded per API result.
+            list[dict]:
+                Active monitorings for existing processes. One
+                dictionary per API result.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/processos"
         return list(self.fetch_paginated(url=url))
@@ -462,10 +590,20 @@ class FetchProcessMixin(FetchBaseMixin):
                 the specified monitoring.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/processos/{monitoring_id}"\
             .format(monitoring_id=monitoring_id)
@@ -485,10 +623,20 @@ class FetchProcessMixin(FetchBaseMixin):
                 Parsed JSON otherwise.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v2/monitoramentos/processos/{monitoring_id}"\
             .format(monitoring_id=monitoring_id)

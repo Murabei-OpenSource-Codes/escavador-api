@@ -1,9 +1,11 @@
 """Process movements, public documents, and file downloads."""
 import os
 import copy
+from urllib.parse import quote
 from slugify import slugify
 from escavador_api.fetch.base import FetchBaseMixin
-from escavador_api.exceptions import EscavadorAPIProblemAPIException
+from escavador_api.exceptions import (
+    EscavadorAPIException, EscavadorAPIProblemAPIException)
 from escavador_api.utils.process import (
     validate_process_number, format_process_number)
 
@@ -37,6 +39,33 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
             id=document["id"],
             extension=document["extensao_arquivo"])
 
+    @staticmethod
+    def _note_download_failure(exc: EscavadorAPIException,
+                               file_key: str | None,
+                               written_paths: list[str]) -> None:
+        """Record the failed key and files already saved.
+
+        Args:
+            exc (EscavadorAPIException):
+                Exception raised for the current document.
+            file_key (str | None):
+                Escavador key of the document that failed.
+            written_paths (list[str]):
+                Paths saved before this failure.
+        """
+        payload = {}
+        if isinstance(exc.payload, dict):
+            payload.update(exc.payload)
+        payload["file_key"] = file_key
+        payload["written_paths"] = list(written_paths)
+        exc.payload = payload
+        exc.message = (
+            "{message}. file_key={file_key}; "
+            "written_paths={written_paths}").format(
+                message=exc.message,
+                file_key=file_key,
+                written_paths=written_paths)
+
     def get_process_updates(self, process_number: str) -> list[dict]:
         """Retrieve process updates from Escavador using CNJ number.
 
@@ -53,11 +82,20 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -67,15 +105,18 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
 
     def get_documents_public(self, process_number: str,
                              download_files: bool = False,
-                             folder_path: str = None,
+                             folder_path: str | None = None,
                              save_files: bool = False) -> list[dict]:
         """List public documents, optionally downloading each file.
 
-        This is a paid request. When ``download_files`` and
-        ``save_files`` are both ``True``, each item is downloaded,
-        written under ``folder_path``, and returned with
-        ``file_path``. When both are ``False``, the method
-        returns an empty list (metadata is fetched but not returned).
+        This is a paid request. When ``download_files`` is
+        ``False``, the method returns the document rows. When it
+        is ``True`` and ``save_files`` is ``False``, each item is
+        downloaded and returned with ``file_content``. When both
+        are ``True``, each item is written under ``folder_path``
+        and returned with ``file_path``. A failure keeps the
+        original exception and adds ``file_key`` and
+        ``written_paths`` to its payload.
 
         Args:
             process_number (str):
@@ -83,36 +124,42 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
                 is optional.
             download_files (bool):
                 When ``True``, call ``download_file`` for each item.
-                Must match ``save_files`` (both ``True`` or both ``False``).
             folder_path (str | None):
                 Directory for saved files when ``save_files`` is ``True``.
                 Defaults to ``./`` inside ``download_file`` when omitted.
             save_files (bool):
-                When ``True`` with ``download_files``, persist PDFs to disk.
-                Must match ``download_files``.
+                When ``True``, persist each download to disk. Requires
+                ``download_files``.
 
         Returns:
             list[dict]:
-                Document rows augmented with ``file_path`` when
-                ``download_files`` and ``save_files`` are ``True``; otherwise
-                an empty list.
+                Document rows. ``file_content`` is set when files are
+                downloaded and not saved. ``file_path`` is set when
+                both flags are ``True``.
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
             EscavadorAPIProblemAPIException:
-                If flags are mismatched, the Escavador API returns an HTTP
-                error, or download arguments are invalid.
+                If ``save_files`` is ``True`` without ``download_files``,
+                or a document row has no ``key``. The payload lists
+                ``written_paths``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
-        is_valid_download_args = (
-            (download_files and save_files) or
-            (not download_files and not save_files))
-        if not is_valid_download_args:
-            msg = (
-                "Either download_files or save_files must be True, "
-                "but not both")
+        if save_files and not download_files:
+            msg = "save_files requires download_files"
             raise EscavadorAPIProblemAPIException(
                 message=msg,
                 payload={
@@ -124,9 +171,21 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
         url = "v2/processos/numero_cnj/{process_number}/documentos-publicos"\
             .format(process_number=process_number)
         documents = list(self.fetch_paginated(url=url))
+        if not download_files:
+            return documents
+
         list_documents_results = []
-        if download_files:
-            for document in documents:
+        written_paths = []
+        for document in documents:
+            file_key = document.get("key")
+            if not file_key:
+                msg = "Document row has no key"
+                raise EscavadorAPIProblemAPIException(
+                    message=msg,
+                    payload={
+                        "file_key": file_key,
+                        "written_paths": list(written_paths)})
+            try:
                 # If files are to be saved, build the file name
                 # using document information
                 file_name = None
@@ -137,16 +196,34 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
 
                 result_data = self.download_file(
                     process_number=process_number,
-                    file_key=document["key"],
+                    file_key=file_key,
                     folder_path=folder_path,
                     file_name=file_name,
                     save_file=save_files)
-                temp_document = copy.deepcopy(document)
-                if save_files:
-                    temp_document["file_path"] = result_data
-                else:
-                    temp_document["file_content"] = result_data
-                list_documents_results.append(temp_document)
+            except EscavadorAPIException as exc:
+                self._note_download_failure(
+                    exc=exc,
+                    file_key=file_key,
+                    written_paths=written_paths)
+                raise
+            except Exception as exc:
+                msg = (
+                    "Download failed for file_key `{file_key}`")\
+                    .format(file_key=file_key)
+                raise EscavadorAPIProblemAPIException(
+                    message=msg,
+                    payload={
+                        "file_key": file_key,
+                        "written_paths": list(written_paths),
+                        "error": str(exc)}) from exc
+
+            temp_document = copy.deepcopy(document)
+            if save_files:
+                temp_document["file_path"] = result_data
+                written_paths.append(result_data)
+            else:
+                temp_document["file_content"] = result_data
+            list_documents_results.append(temp_document)
         return list_documents_results
 
     def get_documents_all(self, process_number: str) -> list[dict]:
@@ -168,11 +245,20 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -181,7 +267,8 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
         return list(self.fetch_paginated(url=url))
 
     def download_file(self, process_number: str, file_key: str,
-                      folder_path: str = None, file_name: str = None,
+                      folder_path: str | None = None,
+                      file_name: str | None = None,
                       save_file: bool = False
                       ) -> bytes | str:
         """Download one process document as binary PDF.
@@ -194,15 +281,19 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
                 Process number following CNJ format (20 digits). Punctuation
                 is optional.
             file_key (str):
-                Escavador document key from a list endpoint.
+                Escavador document key from a list endpoint. Quoted
+                in the request URL.
             folder_path (str | None):
                 Directory when ``save_file`` is ``True``. Defaults to
                 ``./``.
             file_name (str | None):
-                Basename when ``save_file`` is ``True``. Defaults to
-                ``{file_key}.pdf``.
+                Basename when ``save_file`` is ``True``. A missing
+                name defaults to ``{file_key}.pdf``. Slashes in the
+                key are replaced. A path is rejected.
             save_file (bool):
                 When ``True``, write bytes to disk and return the full path.
+                The directory is created when missing. Bytes go to a
+                ``.part`` file, then that file is renamed into place.
 
         Returns:
             bytes | str:
@@ -211,30 +302,39 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
             EscavadorAPIProblemAPIException:
-                If ``save_file`` is ``False`` and ``folder_path`` or
-                ``file_name`` is missing, or the Escavador API returns an
-                HTTP error.
+                If ``file_name`` is not a basename.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
-        if folder_path is None or file_name is None:
-            if not save_file:
-                msg = (
-                    "Folder path and file name must be provided if "
-                    "save_file is False")
-                raise EscavadorAPIProblemAPIException(
-                    message=msg,
-                    payload={
-                        "folder_path": folder_path,
-                        "file_name": file_name})
         if save_file:
             if folder_path is None:
                 folder_path = "./"
             if file_name is None:
-                file_name = "{file_key}.pdf"\
-                    .format(file_key=file_key)
+                safe_key = str(file_key).replace("/", "_")\
+                    .replace("\\", "_")
+                file_name = "{file_key}.pdf".format(file_key=safe_key)
+            name_is_basename = os.path.basename(file_name) == file_name
+            if (
+                    not file_name
+                    or file_name in (".", "..")
+                    or not name_is_basename):
+                msg = "file_name must be a basename"
+                raise EscavadorAPIProblemAPIException(
+                    message=msg,
+                    payload={"file_name": file_name})
 
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -247,14 +347,25 @@ class FetchUpdatesAndDocumentsMixin(FetchBaseMixin):
             "v2/processos/numero_cnj/{formatted_process_number}/"
             "documentos/{file_key}").format(
                 formatted_process_number=formatted_process_number,
-                file_key=file_key)
+                file_key=quote(str(file_key), safe=""))
 
         # File content is returned as binary
         content = self.get_binary(url=url)
         if save_file:
+            os.makedirs(folder_path, exist_ok=True)
             full_file_path = os.path.join(folder_path, file_name)
-            with open(full_file_path, "wb") as file:
-                file.write(content)
+            temporary_path = "{path}.part".format(path=full_file_path)
+            try:
+                with open(temporary_path, "wb") as file:
+                    file.write(content)
+                os.replace(temporary_path, full_file_path)
+            except Exception:
+                try:
+                    if os.path.exists(temporary_path):
+                        os.remove(temporary_path)
+                except OSError:
+                    pass
+                raise
             return full_file_path
         else:
             return content

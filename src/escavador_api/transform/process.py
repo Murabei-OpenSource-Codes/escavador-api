@@ -67,6 +67,8 @@ class TransformProcessData:
                 ``process``: deduplicated rows per ``numero_cnj``.
                 ``process_by_court``: one row per court grade.
                 ``involved``: parties with role and first-court polarity.
+                An empty input returns empty frames. ``involved`` uses
+                ``TransformFirstCourtPolarity.OUTPUT_COLUMNS``.
 
         Raises:
             EscavadorAPIInvalidDocumentException:
@@ -99,8 +101,12 @@ class TransformProcessData:
             all_process = pd.concat(list_process)\
                 .loc[:, cls.PROCESS_COLUMNS]
 
-        # Concatenate all involved parties
-        all_involved = pd.concat(list_involved)
+        # Aggregate all involved parties
+        if len(list_involved) == 0:
+            all_involved = pd.DataFrame(
+                columns=TransformFirstCourtPolarity.OUTPUT_COLUMNS)
+        else:
+            all_involved = pd.concat(list_involved)
         return {
             "process": all_process,
             "process_by_court": all_process_by_court,

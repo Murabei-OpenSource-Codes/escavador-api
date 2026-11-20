@@ -1,4 +1,4 @@
-"""Module for process utilitie functions."""
+"""Module for process utility functions."""
 import re
 from escavador_api.exceptions import EscavadorAPIInvalidDocumentException
 
