@@ -19,10 +19,20 @@ class FetchGeneralMixin(FetchBaseMixin):
                 credit balance and monthly limit.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         url = "v1/quantidade-creditos"
         return self.get(url=url)

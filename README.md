@@ -43,7 +43,8 @@ downstream storage or ETL orchestration beyond this library.
 - **Court Data Refresh**: Request fresh data updates from court sources
 - **Retry Logic**: GET, POST, DELETE, and PATCH retry connection
   errors and timeouts (5 attempts, 3 seconds apart). `get_binary`
-  uses the same retry
+  uses the same retry. Each failed attempt logs a warning before
+  the next try
 - **Pagination cap**: Paginated calls fetch the first page, then at
   most `ESCAVADOR_API__MAX_PAGES` further pages (default 200)
 - **Process transforms**: `TransformProcessData` turns API process
@@ -72,7 +73,7 @@ pip install .
 - python-slugify
 
 Declared in `pyproject.toml` (unpinned package names). **loguru**
-is used for pagination warnings in `FetchBaseMixin.fetch_paginated`.
+logs pagination cap warnings and HTTP retry attempts.
 **pandas** and
 **python-slugify** support `escavador_api.transform` (role mapping).
 
@@ -102,8 +103,9 @@ return `list[dict]` after all pages are fetched (subject to
 `get_documents_all`, `list_monitoring_new_process`,
 `get_results_monitoring_new_process`, and
 `list_monitoring_existing_process`. `get_documents_public` pages
-the public-document route, then returns rows only when
-`download_files` and `save_files` are both true.
+the public-document route and returns those rows. Downloads run
+when `download_files` is true. `save_files` writes them and sets
+`file_path`; otherwise the bytes go on `file_content`.
 
 The auth token is an argument of `EscavadorAPI`. The library does not
 read it from the environment.
@@ -140,7 +142,9 @@ involved_df = tables["involved"]
 
 `process_list` returns `process` (one row per CNJ after deduplication),
 `process_by_court` (one row per court grade), and `involved` (parties
-with normalized roles and first-court polarity).
+with normalized roles and first-court polarity). An empty
+`process_list` returns empty frames. `involved` still has the
+first-court polarity columns.
 
 `involved.normalized_role` is `judge`, `court`, `lawyer`, `party`,
 `third_party`, `auxiliary`, `fiscal`, `representative`, `unknown`,
@@ -225,9 +229,12 @@ get_documents_public(
     save_files: bool = False,
 ) -> list[dict]
 ```
-Pages `GET .../documentos-publicos`. **(paid)** `download_files`
-and `save_files` must both be true or both be false. Both true
-downloads each file and sets `file_path`. Both false returns `[]`.
+Pages `GET .../documentos-publicos`. **(paid)** Both flags false
+returns the document rows. `download_files` true and `save_files`
+false sets `file_content`. Both true writes each file and sets
+`file_path`. A later failure keeps that exception and adds
+`file_key` plus `written_paths` for files already saved.
+`save_files` without `download_files` raises.
 
 ```python
 get_documents_all(process_number: str) -> list[dict]
@@ -238,15 +245,12 @@ restricted documents when the caller is authorized. **(paid)**
 #### Process Updates
 
 ```python
-request_process_public_documents(process_number: str) -> dict
-```
-Request a public-document update with JSON
-`{"documentos_publicos": 1}`. **(paid)**
-
-```python
 request_process_update_public(process_number: str) -> dict
 ```
-Request update of public process information. **(paid)**
+Request update of public process information with JSON
+`{"documentos_publicos": 1}`. **(paid)** HTTP 422
+`UNPROCESSABLE_ENTITY` for a duplicate request raises
+`EscavadorAPIProcessUpdateAlreadyRequestedException`.
 
 ```python
 request_process_update_full(
@@ -258,6 +262,8 @@ request_process_update_full(
 ) -> dict
 ```
 Request full update including restricted documents. **(paid)**
+Duplicate-update HTTP 422 is remapped the same way as
+`request_process_update_public`.
 
 ```python
 get_process_update_status(process_number: str) -> dict
@@ -276,10 +282,12 @@ download_file(
 ) -> bytes | str
 ```
 Downloads one document from `GET .../documentos/{file_key}`.
-**(paid)** When `save_file` is false, `folder_path` and `file_name`
-are required and the method returns the bytes. When `save_file` is
+**(paid)** When `save_file` is false, the method returns the bytes
+and ignores `folder_path` and `file_name`. When `save_file` is
 true, a missing directory defaults to `./` and a missing name
-defaults to `{file_key}.pdf`. The return value is the joined path.
+defaults to `{file_key}.pdf`, with slashes in the key replaced.
+`file_key` is quoted in the URL. `file_name` must be a basename.
+The return value is the joined path.
 
 #### AI Summaries
 
@@ -403,16 +411,24 @@ Delete monitoring.
 The library provides specific exception types:
 
 - `EscavadorAPIException`: Base error. Carries `message` and `payload`.
-- `EscavadorAPIAuthenticationError`: The auth token is empty.
+- `EscavadorAPIAuthenticationError`: The auth token is empty, or HTTP 401.
+- `EscavadorAPIInsufficientCreditsException`: HTTP 402.
+- `EscavadorAPINotFoundException`: HTTP 404, or JSON code `NOT_FOUND`.
 - `EscavadorAPIInvalidDocumentException`: The process number does not
-  have exactly 20 digits (verification is left to the Escavador API).
+  have exactly 20 digits, or JSON code `NUMERO_CNJ_INVALIDO`. That
+  code does not also raise the generic HTTP 422 class.
 - `EscavadorAPIInvalidParametersException`: A call is missing a required
-  argument, such as both `cpf_cnpj` and `nome`.
-- `EscavadorAPIProblemAPIException`: The Escavador API returned an HTTP
-  error, or a monitoring call failed local checks. HTTP payloads
-  include `status_code`. A body that is not JSON raises this error.
-- `EscavadorAPIUnmappedErrorException`: An unexpected error during a
-  request.
+  argument, HTTP 422, or JSON code `UNPROCESSABLE_ENTITY`.
+- `EscavadorAPIProcessUpdateAlreadyRequestedException`: HTTP 422
+  `UNPROCESSABLE_ENTITY` when a public or full update is already
+  in progress (`request_process_update_public` and
+  `request_process_update_full` only).
+- `EscavadorAPIRateLimitException`: HTTP 429.
+- `EscavadorAPIProblemAPIException`: A local check failed, such as
+  inconsistent download flags or monitoring arguments. It is not the
+  type raised for an HTTP error.
+- `EscavadorAPIUnmappedErrorException`: The status or `code` matches
+  no class. HTTP payloads include `request_error_code`.
 
 ## Retry Logic
 
@@ -422,6 +438,8 @@ failures.
 - **Attempts**: 5 (`stop_after_attempt`)
 - **Delay**: 3 seconds between attempts
 - **Retried errors**: `requests.ConnectionError` and `requests.Timeout`
+- **Logging**: a loguru warning before each sleep (method name,
+  exception type, attempt number)
 - **Not retried**: Validation errors and HTTP error responses
 
 ## Process Number Format

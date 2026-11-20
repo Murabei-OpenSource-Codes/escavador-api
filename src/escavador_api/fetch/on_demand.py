@@ -1,6 +1,7 @@
-"""Module to handle processes requests."""
-from typing import Any, Iterator, Literal, TypedDict
-from escavador_api.exceptions import EscavadorAPIProblemAPIException
+"""On-demand process update requests."""
+from escavador_api.exceptions import (
+    EscavadorAPIProblemAPIException, EscavadorAPIInvalidParametersException,
+    EscavadorAPIProcessUpdateAlreadyRequestedException)
 
 
 # Local imports
@@ -10,36 +11,6 @@ from escavador_api.utils.process import validate_process_number
 
 class FetchOnDemandMixin(FetchBaseMixin):
     """Mixin to handle on-demand requests."""
-
-    def request_process_public_documents(self, process_number: str) -> dict:
-        """Request a public-document update for a CNJ number.
-
-        This is a paid request. The body is JSON
-        ``{"documentos_publicos": 1}``.
-
-        Args:
-            process_number (str):
-                Process number following CNJ format (20 digits). Punctuation
-                is optional.
-
-        Returns:
-            dict:
-                JSON response returned by the Escavador API with
-                the search request status.
-
-        Raises:
-            EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
-            EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
-        """
-        process_number = validate_process_number(process_number)
-        url = "v2/processos/numero_cnj/{process_number}/solicitar-atualizacao"\
-            .format(process_number=process_number)
-        data = {"documentos_publicos": 1}
-        return self.post(json=data, url=url)
 
     def request_process_update_public(self, process_number: str) -> dict:
         """Request update to public process information using CNJ number.
@@ -61,11 +32,20 @@ class FetchOnDemandMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -74,13 +54,25 @@ class FetchOnDemandMixin(FetchBaseMixin):
 
         # Build data payload
         data = {"documentos_publicos": 1}
-        return self.post(data=data, url=url)
+        try:
+            return self.post(json=data, url=url)
+        except EscavadorAPIInvalidParametersException as e:
+            request_error_code = e.payload.get('request_error_code', -1)
+            body_code = e.payload.get('code') or e.payload.get('error')
+            is_already_updated = (
+                (body_code == 'UNPROCESSABLE_ENTITY') and
+                (request_error_code == 422))
+            if is_already_updated:
+                raise EscavadorAPIProcessUpdateAlreadyRequestedException(
+                    message="Process already being monitored.",
+                    payload=e.payload)
+            raise
 
     def request_process_update_full(self, process_number: str,
                                     auth_username: str | None = None,
                                     auth_password: str | None = None,
                                     certificate_id: int | None = None,
-                                    use_certificate: bool = False) -> Any:
+                                    use_certificate: bool = False) -> dict:
         """Request update to complete process information using CNJ number.
 
         This is a paid request.
@@ -113,12 +105,22 @@ class FetchOnDemandMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
             EscavadorAPIProblemAPIException:
-                If authentication arguments are inconsistent or the
-                Escavador API returns an HTTP error.
+                If authentication arguments are inconsistent.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)
@@ -155,7 +157,20 @@ class FetchOnDemandMixin(FetchBaseMixin):
             data["utilizar_certificado"] = True
         if certificate_id is not None:
             data["certificado_id"] = certificate_id
-        return self.post(data=data, url=url)
+
+        try:
+            return self.post(json=data, url=url)
+        except EscavadorAPIInvalidParametersException as e:
+            request_error_code = e.payload.get('request_error_code', -1)
+            body_code = e.payload.get('code') or e.payload.get('error')
+            is_already_updated = (
+                (body_code == 'UNPROCESSABLE_ENTITY') and
+                (request_error_code == 422))
+            if is_already_updated:
+                raise EscavadorAPIProcessUpdateAlreadyRequestedException(
+                    message="Process already being monitored.",
+                    payload=e.payload)
+            raise
 
     def get_process_update_status(self, process_number: str) -> dict:
         """Retrieve search request status.
@@ -174,11 +189,25 @@ class FetchOnDemandMixin(FetchBaseMixin):
 
         Raises:
             EscavadorAPIInvalidDocumentException:
-                If process_number is not a valid CNJ number.
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+                If process_number is not a valid CNJ number, or
+                the API code is ``NUMERO_CNJ_INVALIDO``.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY`` when the body
+                is not remapped to an update already in progress.
+            EscavadorAPIProcessUpdateAlreadyRequestedException:
+                HTTP 422 with ``code`` or ``error``
+                ``UNPROCESSABLE_ENTITY`` when an update is already
+                running for this process.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         # Checks if process number is valid before sending request
         process_number = validate_process_number(process_number)

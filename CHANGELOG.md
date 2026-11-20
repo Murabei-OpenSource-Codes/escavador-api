@@ -6,6 +6,38 @@ The format is based on Keep a Changelog. The version is the package
 tag produced by `build.sh` (beta tags on branches other than `main`).
 Entries start at `0.1.10`. Older tags remain in git only.
 
+## [0.1.26] - 2026-11-20
+
+### Added
+- `EscavadorAPIInsufficientCreditsException`, `EscavadorAPINotFoundException`,
+  and `EscavadorAPIRateLimitException` for HTTP 402, 404, and 429
+- `EscavadorAPIProcessUpdateAlreadyRequestedException` — raised when
+  `request_process_update_public` or `request_process_update_full`
+  get HTTP 422 ``UNPROCESSABLE_ENTITY`` for a duplicate update request
+
+### Changed
+- `get_documents_public` — returns paged rows when download flags are
+  false. Download without save sets ``file_content``. Failures add
+  ``file_key`` and ``written_paths`` to the exception payload
+- `download_file` — bytes when ``save_file`` is false without path
+  args. Quotes ``file_key``. Rejects a non-basename ``file_name``.
+  Writes via a ``.part`` file, then renames into place
+- HTTP error payloads use ``request_error_code``. Status 401, 402, 404,
+  422, and 429 raise dedicated classes. ``NUMERO_CNJ_INVALIDO`` stays
+  on ``EscavadorAPIInvalidDocumentException``
+- `get`, `get_binary`, `post`, `delete`, and `patch` re-raise when the
+  failure happens before a response exists. Retries log a loguru
+  warning before each 3s sleep
+- `TransformProcessData.process_list` with an empty list returns empty
+  frames. ``involved`` keeps the first-court polarity columns
+- `EscavadorAPIException` uses a new payload dict when none is passed
+- Method docstrings list status-specific exceptions instead of only
+  ``EscavadorAPIProblemAPIException``
+
+### Removed
+- `request_process_public_documents` — same route as
+  ``request_process_update_public`` (``{"documentos_publicos": 1}``)
+
 ## [0.1.25] - 2026-11-18
 
 ### Added

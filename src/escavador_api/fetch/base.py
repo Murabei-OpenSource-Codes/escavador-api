@@ -3,26 +3,49 @@ import requests
 from loguru import logger
 from urllib.parse import urljoin
 from tenacity import (
-    retry, retry_if_exception_type, stop_after_attempt, wait_fixed)
-from escavador_api.exceptions import (
-    EscavadorAPIProblemAPIException, EscavadorAPIUnmappedErrorException,
-    EscavadorAPIAuthenticationError)
+    retry, retry_if_exception_type, stop_after_attempt, wait_fixed,
+    RetryCallState)
 from typing import Any, Iterator
 
 # Local imports
+from escavador_api.exceptions import (
+    EscavadorAPIProblemAPIException, EscavadorAPIAuthenticationError,
+    EscavadorAPIErrorTreatment)
 from escavador_api.config import MAX_PAGES, PROXY_URL, REQUEST_TIMEOUT
 
 
 RETRY_ERRORS = (requests.ConnectionError, requests.Timeout)
 """Tuple of errors to retry on."""
 
+_RETRY_ATTEMPTS = 5
+"""Max HTTP attempts before giving up on a network error."""
+
+
+def _log_retry_before_sleep(retry_state: RetryCallState) -> None:
+    """Log a network failure before sleeping for the next attempt."""
+    outcome = retry_state.outcome
+    if outcome is None or not outcome.failed:
+        return
+    exc = outcome.exception()
+    fn_name = retry_state.fn.__name__
+    msg = (
+        "Escavador API {fn_name} failed ({error_type}): {error}. "
+        "Attempt {attempt}/{max_attempts}, retrying in 3s").format(
+            fn_name=fn_name,
+            error_type=type(exc).__name__,
+            error=exc,
+            attempt=retry_state.attempt_number,
+            max_attempts=_RETRY_ATTEMPTS)
+    logger.warning(msg)
+
 
 # Five attempts, three seconds apart, on connection errors and timeouts.
 _RETRY_ON_NETWORK = retry(
     retry=retry_if_exception_type(RETRY_ERRORS),
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(_RETRY_ATTEMPTS),
     wait=wait_fixed(3),
-    reraise=True)
+    reraise=True,
+    before_sleep=_log_retry_before_sleep)
 
 
 class FetchBaseMixin:
@@ -66,28 +89,50 @@ class FetchBaseMixin:
         self.session.headers.update(self.headers)
 
     @staticmethod
-    def _response_api_message(response: requests.Response) -> str:
-        """Read an error message from an HTTP error response body.
+    def _error_treatment(response: requests.Response) -> None:
+        """Raise a domain exception for a failed HTTP response.
 
-        Binary and empty bodies skip JSON parsing.
+        The HTTP status is stored as ``request_error_code`` and
+        mapped by ``EscavadorAPIErrorTreatment``.
+
+        Args:
+            response (requests.Response):
+                HTTP response that failed.
+
+        Raises:
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
+            EscavadorAPIUnmappedErrorException:
+                When no class lists the status or ``code``.
         """
         try:
-            body = response.json()
-            if isinstance(body, dict):
-                message = body.get("message")
-                if message:
-                    return str(message)
+            request_data = response.json()
         except ValueError:
-            pass
-        text = (response.text or "").strip()
-        if text:
-            return text[:500]
-        return "HTTP {status_code}".format(
-            status_code=response.status_code)
+            request_data = None
+
+        if not isinstance(request_data, dict):
+            text = (response.text or "").strip()
+            request_data = {
+                "request_error_code": response.status_code,
+                "body": text[:500]}
+        else:
+            request_data["request_error_code"] = response.status_code
+        EscavadorAPIErrorTreatment.raise_by_code(
+            request_data=request_data)
 
     @_RETRY_ON_NETWORK
     def get(self, url: str, params: dict | None = None) -> Any:
-        """Aux fuction to allow retry on get requests.
+        """GET request, retrying network failures.
 
         Args:
             url (str):
@@ -100,44 +145,49 @@ class FetchBaseMixin:
                 Data returned by the API.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
             requests.ConnectionError:
                 If the connection still fails after 5 attempts.
             requests.Timeout:
                 If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
+        response = None
         try:
             response = self.session.get(
                 url=url_with_base, params=params,
                 timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
+
             try:
                 return response.json()
             except ValueError as e:
                 raise EscavadorAPIProblemAPIException(
                     message="Response is not valid JSON",
-                    payload={"error": str(e)})
+                    payload={
+                        "error": str(e),
+                        "request_error_code": response.status_code})
 
-        except requests.HTTPError as e:
-            msg = self._response_api_message(response)
-            raise EscavadorAPIProblemAPIException(
-                message=msg,
-                payload={
-                    "status_code": response.status_code,
-                    "error": str(e)})
         except RETRY_ERRORS:
             raise
-        except EscavadorAPIProblemAPIException:
-            raise
-        except Exception as e:
-            msg = "Unmapped error"
-            raise EscavadorAPIUnmappedErrorException(
-                message=msg,
-                payload={"error": str(e)})
+
+        except Exception:
+            if response is None:
+                raise
+            self._error_treatment(response=response)
 
     @_RETRY_ON_NETWORK
     def get_binary(self, url: str, params: dict | None = None) -> bytes:
@@ -154,16 +204,27 @@ class FetchBaseMixin:
                 Raw response content.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
             requests.ConnectionError:
                 If the connection still fails after 5 attempts.
             requests.Timeout:
                 If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
+        response = None
         try:
             response = self.session.get(
                 url=url_with_base, params=params,
@@ -171,22 +232,13 @@ class FetchBaseMixin:
             response.raise_for_status()
             return response.content
 
-        except requests.HTTPError as e:
-            msg = self._response_api_message(response)
-            raise EscavadorAPIProblemAPIException(
-                message=msg,
-                payload={
-                    "status_code": response.status_code,
-                    "error": str(e)})
         except RETRY_ERRORS:
             raise
-        except EscavadorAPIProblemAPIException:
-            raise
-        except Exception as e:
-            msg = "Unmapped error"
-            raise EscavadorAPIUnmappedErrorException(
-                message=msg,
-                payload={"error": str(e)})
+
+        except Exception:
+            if response is None:
+                raise
+            self._error_treatment(response=response)
 
     @_RETRY_ON_NETWORK
     def post(self, url: str, params: dict | None = None,
@@ -208,16 +260,27 @@ class FetchBaseMixin:
                 Data returned by the API.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
             requests.ConnectionError:
                 If the connection still fails after 5 attempts.
             requests.Timeout:
                 If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
+        response = None
         try:
             response = self.session.post(
                 url=url_with_base, params=params,
@@ -228,27 +291,20 @@ class FetchBaseMixin:
             except ValueError as e:
                 raise EscavadorAPIProblemAPIException(
                     message="Response is not valid JSON",
-                    payload={"error": str(e)})
+                    payload={
+                        "error": str(e),
+                        "request_error_code": response.status_code})
 
-        except requests.HTTPError as e:
-            msg = self._response_api_message(response)
-            raise EscavadorAPIProblemAPIException(
-                message=msg,
-                payload={
-                    "status_code": response.status_code,
-                    "error": str(e)})
         except RETRY_ERRORS:
             raise
-        except EscavadorAPIProblemAPIException:
-            raise
-        except Exception as e:
-            msg = "Unmapped error"
-            raise EscavadorAPIUnmappedErrorException(
-                message=msg,
-                payload={"error": str(e)})
+
+        except Exception:
+            if response is None:
+                raise
+            self._error_treatment(response=response)
 
     @_RETRY_ON_NETWORK
-    def delete(self, url: str) -> Any:
+    def delete(self, url: str) -> bool | dict:
         """Send a DELETE request.
 
         Args:
@@ -261,12 +317,27 @@ class FetchBaseMixin:
                 Parsed JSON otherwise.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
+            requests.ConnectionError:
+                If the connection still fails after 5 attempts.
+            requests.Timeout:
+                If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
+        response = None
         try:
             response = self.session.delete(
                 url=url_with_base, timeout=REQUEST_TIMEOUT)
@@ -284,27 +355,20 @@ class FetchBaseMixin:
                 except ValueError as e:
                     raise EscavadorAPIProblemAPIException(
                         message="Response is not valid JSON",
-                        payload={"error": str(e)})
+                        payload={
+                            "error": str(e),
+                            "request_error_code": response.status_code})
 
-        except requests.HTTPError as e:
-            msg = self._response_api_message(response)
-            raise EscavadorAPIProblemAPIException(
-                message=msg,
-                payload={
-                    "status_code": response.status_code,
-                    "error": str(e)})
         except RETRY_ERRORS:
             raise
-        except EscavadorAPIProblemAPIException:
-            raise
-        except Exception as e:
-            msg = "Unmapped error"
-            raise EscavadorAPIUnmappedErrorException(
-                message=msg,
-                payload={"error": str(e)})
+
+        except Exception:
+            if response is None:
+                raise
+            self._error_treatment(response=response)
 
     @_RETRY_ON_NETWORK
-    def patch(self, url: str, data: Any) -> Any:
+    def patch(self, url: str, data: Any) -> bool | dict:
         """Send a PATCH request.
 
         Args:
@@ -319,12 +383,27 @@ class FetchBaseMixin:
                 Parsed JSON otherwise.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
+            requests.ConnectionError:
+                If the connection still fails after 5 attempts.
+            requests.Timeout:
+                If the request still times out after 5 attempts.
         """
         url_with_base = urljoin(self.BASE_URL, url)
+        response = None
         try:
             response = self.session.patch(
                 url=url_with_base, json=data, timeout=REQUEST_TIMEOUT)
@@ -342,24 +421,17 @@ class FetchBaseMixin:
                 except ValueError as e:
                     raise EscavadorAPIProblemAPIException(
                         message="Response is not valid JSON",
-                        payload={"error": str(e)})
+                        payload={
+                            "error": str(e),
+                            "request_error_code": response.status_code})
 
-        except requests.HTTPError as e:
-            msg = self._response_api_message(response)
-            raise EscavadorAPIProblemAPIException(
-                message=msg,
-                payload={
-                    "status_code": response.status_code,
-                    "error": str(e)})
         except RETRY_ERRORS:
             raise
-        except EscavadorAPIProblemAPIException:
-            raise
-        except Exception as e:
-            msg = "Unmapped error"
-            raise EscavadorAPIUnmappedErrorException(
-                message=msg,
-                payload={"error": str(e)})
+
+        except Exception:
+            if response is None:
+                raise
+            self._error_treatment(response=response)
 
     def fetch_paginated(self, url: str, params: dict | None = None
                         ) -> Iterator[dict]:
@@ -380,10 +452,20 @@ class FetchBaseMixin:
                 Individual items returned by the API.
 
         Raises:
-            EscavadorAPIProblemAPIException:
-                If the Escavador API returns an HTTP error.
+            EscavadorAPIAuthenticationError:
+                HTTP 401.
+            EscavadorAPIInsufficientCreditsException:
+                HTTP 402.
+            EscavadorAPINotFoundException:
+                HTTP 404 or code ``NOT_FOUND``.
+            EscavadorAPIInvalidDocumentException:
+                Code ``NUMERO_CNJ_INVALIDO``, not the generic 422.
+            EscavadorAPIInvalidParametersException:
+                HTTP 422 or code ``UNPROCESSABLE_ENTITY``.
+            EscavadorAPIRateLimitException:
+                HTTP 429.
             EscavadorAPIUnmappedErrorException:
-                If an unexpected error occurs during the request.
+                When no class lists the status or ``code``.
         """
         pages_fetched = 0
         while url is not None:
@@ -391,7 +473,7 @@ class FetchBaseMixin:
             for item in data.get("items", []):
                 yield item
 
-            # The paginantion of the query does not need the parameters
+            # The pagination of the query does not need the parameters
             # they are send at the first request
             params = None
             next_url = data.get("links", {}).get("next")
