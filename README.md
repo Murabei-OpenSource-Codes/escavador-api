@@ -43,7 +43,8 @@ downstream storage or ETL orchestration beyond this library.
 - **Court Data Refresh**: Request fresh data updates from court sources
 - **Retry Logic**: GET, POST, DELETE, and PATCH retry connection
   errors and timeouts (5 attempts, 3 seconds apart). `get_binary`
-  uses the same retry
+  uses the same retry. Each failed attempt logs a warning before
+  the next try
 - **Pagination cap**: Paginated calls fetch the first page, then at
   most `ESCAVADOR_API__MAX_PAGES` further pages (default 200)
 - **Process transforms**: `TransformProcessData` turns API process
@@ -72,7 +73,7 @@ pip install .
 - python-slugify
 
 Declared in `pyproject.toml` (unpinned package names). **loguru**
-is used for pagination warnings in `FetchBaseMixin.fetch_paginated`.
+logs pagination cap warnings and HTTP retry attempts.
 **pandas** and
 **python-slugify** support `escavador_api.transform` (role mapping).
 
@@ -244,15 +245,12 @@ restricted documents when the caller is authorized. **(paid)**
 #### Process Updates
 
 ```python
-request_process_public_documents(process_number: str) -> dict
-```
-Request a public-document update with JSON
-`{"documentos_publicos": 1}`. **(paid)**
-
-```python
 request_process_update_public(process_number: str) -> dict
 ```
-Request update of public process information. **(paid)**
+Request update of public process information with JSON
+`{"documentos_publicos": 1}`. **(paid)** HTTP 422
+`UNPROCESSABLE_ENTITY` for a duplicate request raises
+`EscavadorAPIProcessUpdateAlreadyRequestedException`.
 
 ```python
 request_process_update_full(
@@ -264,6 +262,8 @@ request_process_update_full(
 ) -> dict
 ```
 Request full update including restricted documents. **(paid)**
+Duplicate-update HTTP 422 is remapped the same way as
+`request_process_update_public`.
 
 ```python
 get_process_update_status(process_number: str) -> dict
@@ -419,6 +419,10 @@ The library provides specific exception types:
   code does not also raise the generic HTTP 422 class.
 - `EscavadorAPIInvalidParametersException`: A call is missing a required
   argument, HTTP 422, or JSON code `UNPROCESSABLE_ENTITY`.
+- `EscavadorAPIProcessUpdateAlreadyRequestedException`: HTTP 422
+  `UNPROCESSABLE_ENTITY` when a public or full update is already
+  in progress (`request_process_update_public` and
+  `request_process_update_full` only).
 - `EscavadorAPIRateLimitException`: HTTP 429.
 - `EscavadorAPIProblemAPIException`: A local check failed, such as
   inconsistent download flags or monitoring arguments. It is not the
@@ -434,6 +438,8 @@ failures.
 - **Attempts**: 5 (`stop_after_attempt`)
 - **Delay**: 3 seconds between attempts
 - **Retried errors**: `requests.ConnectionError` and `requests.Timeout`
+- **Logging**: a loguru warning before each sleep (method name,
+  exception type, attempt number)
 - **Not retried**: Validation errors and HTTP error responses
 
 ## Process Number Format
